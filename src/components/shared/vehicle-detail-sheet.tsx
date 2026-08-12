@@ -605,8 +605,8 @@ function SimilarVehiclesSection({ vehicle }: { vehicle: Auction }) {
                 >
                   {/* Gradient placeholder */}
                   <div className={`relative aspect-[16/10] rounded-md overflow-hidden bg-gradient-to-br ${gradient} mb-2`}>
-                    {getAuctionImageUrl(v.imageThumbnail, v.imageUrl) ? (
-                      <img src={getAuctionImageUrl(v.imageThumbnail, v.imageUrl)!} alt={label} className="h-full w-full object-cover" />
+                    {getAuctionImageUrl(v.lotNumber, v.imageThumbnail, v.imageUrl) ? (
+                      <img src={getAuctionImageUrl(v.lotNumber, v.imageThumbnail, v.imageUrl)!} alt={label} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
                         <span className="text-xl font-bold text-white/80">
@@ -654,7 +654,7 @@ export function VehicleDetailSheet({ vehicle, open, onOpenChange }: VehicleDetai
 
   const label = getVehicleLabel(vehicle)
   const gradient = getPlaceholderGradient(vehicle.make)
-  const imageSource = getAuctionImageUrl(vehicle.imageThumbnail, vehicle.imageUrl)
+  const imageSource = getAuctionImageUrl(vehicle.lotNumber, vehicle.imageThumbnail, vehicle.imageUrl)
   const initials = getVehicleInitials(vehicle.make, vehicle.modelGroup || vehicle.modelDetail)
   const location = getLocationLabel(vehicle)
   const zip = vehicle.locationZip ? ` ${vehicle.locationZip}` : ''

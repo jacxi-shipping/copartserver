@@ -199,7 +199,7 @@ function auctionData(mappedRow: Record<string, unknown>): Prisma.AuctionUnchecke
   }
 }
 
-const BATCH_SIZE = 100
+const BATCH_SIZE = 25
 
 function deduplicateRows(rows: Record<string, unknown>[]): { rows: Record<string, unknown>[]; skipped: number } {
   const rowsByLot = new Map<number, Record<string, unknown>>()
@@ -274,7 +274,7 @@ async function flushBatch(
         }
         result.processedRows++
       }
-    })
+    }, { maxWait: 10_000, timeout: 300_000 })
   } catch (batchErr) {
     const errMsg = batchErr instanceof Error ? batchErr.message : String(batchErr)
     console.error(`Batch of ${rows.length} failed (${errMsg}), falling back to individual row processing...`)

@@ -51,6 +51,7 @@ export function VehicleCard({ auction, showLiveBadge }: { auction: Auction; show
 
   // Spring animation state for heart button
   const [heartScale, setHeartScale] = useState(1)
+  const [imageFailed, setImageFailed] = useState(false)
 
   const handleHeartClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -61,16 +62,17 @@ export function VehicleCard({ auction, showLiveBadge }: { auction: Auction; show
   }
 
   const damageBadgeClasses = getDamageBadgeClasses(auction.damageDescription)
-  const imageSource = getAuctionImageUrl(auction.imageThumbnail, auction.imageUrl)
+  const imageSource = getAuctionImageUrl(auction.lotNumber, auction.imageThumbnail, auction.imageUrl)
 
   return (
     <Card className="group overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
       {/* Image / Placeholder with shimmer */}
       <div className="relative aspect-video overflow-hidden bg-muted">
-        {imageSource ? (
+        {imageSource && !imageFailed ? (
           <img
             src={imageSource}
             alt={label}
+            onError={() => setImageFailed(true)}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (

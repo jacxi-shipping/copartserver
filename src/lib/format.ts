@@ -29,7 +29,7 @@ export function formatSaleDate(dateStr: string | null): string {
 
 export function formatSaleTime(saleTime: string | null): string {
   if (!saleTime) return ''
-  const s = saleTime.padStart(4, '0')
+  const s = saleTime.replace(':', '').padStart(4, '0')
   const hours = parseInt(s.slice(0, 2), 10)
   const mins = s.slice(2, 4)
   if (isNaN(hours)) return ''

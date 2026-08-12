@@ -5,11 +5,17 @@ import { summarizeMarketOverview } from '../../src/lib/analytics-helpers.ts'
 import { isCsvFilename } from '../../src/lib/import-validation.ts'
 import { getDbField, getMissingRequiredFields } from '../../src/lib/import-schema.ts'
 import { buildTextSearchWhere, buildUpcomingSaleDateWhere } from '../../src/lib/search-helpers.ts'
+import { formatSaleTime } from '../../src/lib/format.ts'
 
 test('CSV filenames are validated conservatively', () => {
   assert.equal(isCsvFilename('lots.csv'), true)
   assert.equal(isCsvFilename('LOTS.CSV'), true)
   assert.equal(isCsvFilename('lots.txt'), false)
+})
+
+test('sale times support normalized and compact CSV forms', () => {
+  assert.equal(formatSaleTime('11:00'), '11:00 AM')
+  assert.equal(formatSaleTime('1200'), '12:00 PM')
 })
 
 test('import schema resolves mapped fields and required headers by db field name', () => {

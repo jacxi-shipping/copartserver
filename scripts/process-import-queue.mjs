@@ -8,7 +8,8 @@ import { PrismaClient } from '@prisma/client'
 const db = new PrismaClient()
 const POLL_INTERVAL_MS = Math.max(Number.parseInt(process.env.IMPORT_WORKER_POLL_INTERVAL_MS ?? '5000', 10) || 5000, 1000)
 const RUN_ONCE = process.env.IMPORT_WORKER_ONCE === 'true'
-const UPSERT_BATCH_SIZE = 500
+const UPSERT_BATCH_SIZE = 25
+const JOB_UPDATE_TIMEOUT_MS = 30_000
 const AUCTION_UPSERT_COLUMNS = [
   'sourceId',
   'yardNumber',
@@ -404,9 +405,12 @@ async function bulkUpsertRows(rows, result) {
   for (let start = 0; start < rows.length; start += UPSERT_BATCH_SIZE) {
     const batch = rows.slice(start, start + UPSERT_BATCH_SIZE)
     const batchResult = { processedRows: 0, insertedRows: 0, updatedRows: 0, skippedRows: 0 }
-    await db.$transaction(async (tx) => {
-      for (const row of batch) await applyRowMutation(tx, row, batchResult)
-    })
+    await db.$transaction(
+      async (tx) => {
+        for (const row of batch) await applyRowMutation(tx, row, batchResult)
+      },
+      { maxWait: 10_000, timeout: 300_000 },
+    )
     result.processedRows += batchResult.processedRows
     result.insertedRows += batchResult.insertedRows
     result.updatedRows += batchResult.updatedRows
@@ -486,7 +490,7 @@ async function processCSV(filePath, jobId, onProgress) {
         result.failedRows++
       }
 
-      if (currentBatch.length >= 100) {
+      if (currentBatch.length >= UPSERT_BATCH_SIZE) {
         await flushBatch(currentBatch, result, onProgress)
         currentBatch = []
       }
@@ -521,53 +525,41 @@ async function processJob(jobId) {
   if (!job) throw new Error(`Import job ${jobId} not found`)
   if (!job.storageUrl) throw new Error(`Import job ${jobId} has no storageUrl`)
 
-  await db.importJob.update({
-    where: { id: jobId },
-    data: {
-      status: 'processing',
-      startedAt: job.startedAt ?? new Date(),
-      errorMessage: null,
-    },
+  await updateImportJob(jobId, {
+    status: 'processing',
+    startedAt: job.startedAt ?? new Date(),
+    errorMessage: null,
   })
 
   const tempPath = await downloadToTempFile(job.storageUrl, job.id)
 
   try {
     const result = await processCSV(tempPath, job.id, async (progress) => {
-      await db.importJob.update({
-        where: { id: job.id },
-        data: {
-          processedRows: progress.processedRows,
-          insertedRows: progress.insertedRows,
-          updatedRows: progress.updatedRows,
-          skippedRows: progress.skippedRows,
-          failedRows: progress.failedRows,
-        },
+      await updateImportJob(job.id, {
+        processedRows: progress.processedRows,
+        insertedRows: progress.insertedRows,
+        updatedRows: progress.updatedRows,
+        skippedRows: progress.skippedRows,
+        failedRows: progress.failedRows,
       })
     })
 
-    await db.importJob.update({
-      where: { id: job.id },
-      data: {
-        status: result.errorMessage ? 'failed' : 'completed',
-        completedAt: new Date(),
-        totalRows: result.totalRows,
-        processedRows: result.processedRows,
-        insertedRows: result.insertedRows,
-        updatedRows: result.updatedRows,
-        skippedRows: result.skippedRows,
-        failedRows: result.failedRows,
-        errorMessage: result.errorMessage ?? null,
-      },
+    await updateImportJob(job.id, {
+      status: result.errorMessage ? 'failed' : 'completed',
+      completedAt: new Date(),
+      totalRows: result.totalRows,
+      processedRows: result.processedRows,
+      insertedRows: result.insertedRows,
+      updatedRows: result.updatedRows,
+      skippedRows: result.skippedRows,
+      failedRows: result.failedRows,
+      errorMessage: result.errorMessage ?? null,
     })
   } catch (error) {
-    await db.importJob.update({
-      where: { id: job.id },
-      data: {
-        status: 'failed',
-        completedAt: new Date(),
-        errorMessage: error instanceof Error ? error.message : 'Processing failed',
-      },
+    await updateImportJob(job.id, {
+      status: 'failed',
+      completedAt: new Date(),
+      errorMessage: error instanceof Error ? error.message : 'Processing failed',
     })
     throw error
   } finally {
@@ -577,6 +569,13 @@ async function processJob(jobId) {
       // ignore temp cleanup failures
     }
   }
+}
+
+async function updateImportJob(jobId, data) {
+  return Promise.race([
+    db.importJob.update({ where: { id: jobId }, data }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out updating import job status')), JOB_UPDATE_TIMEOUT_MS)),
+  ])
 }
 
 async function claimNextJob() {
