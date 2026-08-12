@@ -63,16 +63,6 @@ export const COLUMN_MAP: Record<string, string> = {
 
 export const REQUIRED_DB_FIELDS = [
   'lotNumber',
-  'saleDate',
-  'saleTime',
-  'timeZone',
-  'year',
-  'make',
-  'modelGroup',
-  'modelDetail',
-  'vin',
-  'saleStatus',
-  'locationState',
 ] as const
 
 export function normalizeHeader(header: string): string {

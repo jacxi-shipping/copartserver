@@ -73,7 +73,7 @@ const scaleIn = {
 
 // ─── Upload Phase ──────────────────────────────────────────────────────────
 
-type UploadPhase = 'idle' | 'uploading' | 'processing' | 'done' | 'error'
+type UploadPhase = 'idle' | 'uploading' | 'queued' | 'processing' | 'done' | 'error'
 
 function shouldUseServerUploadFallback(): boolean {
   if (typeof window === 'undefined') return false
@@ -118,6 +118,7 @@ function UploadProgressBar({
   if (phase === 'idle' || phase === 'done') return null
 
   const isUploading = phase === 'uploading'
+  const isQueued = phase === 'queued'
   const isProcessing = phase === 'processing'
   const isError = phase === 'error'
 
@@ -154,7 +155,9 @@ function UploadProgressBar({
             <p className="text-sm font-semibold">
               {isError
                 ? 'Upload Failed'
-                : isProcessing
+                : isQueued
+                  ? 'Queued for Import'
+                  : isProcessing
                   ? 'Processing CSV...'
                   : 'Uploading...'}
               {!isError && !isProcessing && total > 0 && (
@@ -166,7 +169,9 @@ function UploadProgressBar({
             <p className="text-xs text-muted-foreground">
               {isError
                 ? 'An error occurred during upload'
-                : isProcessing
+                : isQueued
+                  ? 'Waiting for an import worker to claim this file'
+                  : isProcessing
                   ? total > 0 && loaded > 0
                     ? `${loaded.toLocaleString()} of ${total.toLocaleString()} rows processed`
                     : 'Parsing data and inserting records'
@@ -438,7 +443,7 @@ export function ImportTab() {
 
       setUploadLoaded(file.size)
       setUploadProgress(100)
-      setUploadPhase('processing')
+      setUploadPhase('queued')
 
       let completeData: { success?: boolean; data?: { jobId?: string; status?: string }; error?: { message?: string } }
       try {
@@ -519,7 +524,7 @@ export function ImportTab() {
             }
 
             if (job.status === 'queued') {
-              setUploadPhase('processing')
+              setUploadPhase('queued')
             }
 
             // Still processing — check timeout
@@ -551,7 +556,7 @@ export function ImportTab() {
     }
   }, [file, resetUpload, fetchImports])
 
-  const isUploading = uploadPhase === 'uploading' || uploadPhase === 'processing'
+  const isUploading = uploadPhase === 'uploading' || uploadPhase === 'queued' || uploadPhase === 'processing'
 
   const getStatusIcon = (status: string) => {
     switch (status) {

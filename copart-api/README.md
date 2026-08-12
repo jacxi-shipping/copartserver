@@ -1,25 +1,19 @@
-# Copart Auction API
+# Retired Copart Auction API
 
-PostgreSQL-native FastAPI service for streamed Copart CSV imports and indexed auction search.
+This FastAPI service is retained only as a historical reference. It does not expose auction, search, statistics, or import endpoints because its former row-level `auctions` schema conflicts with the active Prisma `Auction`/`Lot` model.
 
-## Run locally
-
-```bash
-cp .env.example .env
-createdb -U postgres copart
-alembic upgrade head
-uvicorn app.main:app --reload
-```
-
-Set `DATABASE_URL` in `.env` to your local PostgreSQL connection string, for example `postgresql+psycopg://copart:copart@localhost:5432/copart`. The API is available at `http://localhost:8000`; documentation is at `/docs`, `/redoc`, and `/openapi.json`.
-
-## Import and search
+Use the Next.js API and the Prisma worker from the repository root instead:
 
 ```bash
-curl -F file=@salesdata.csv http://localhost:8000/api/v1/import
-curl 'http://localhost:8000/api/v1/search?q=Toyota%204%20Runner'
-curl 'http://localhost:8000/api/v1/auctions/upcoming?page=1&page_size=100'
-python -m scripts.import_csv salesdata.csv
+npm run import:worker
 ```
 
-Imports stream CSV rows in configurable batches, preserve raw and unknown fields in JSONB, and upsert by `lot_number`. Existing values are replaced only by records with a newer `last_updated_time`. Date `0` represents unscheduled inventory and is excluded from default upcoming searches. Set `API_AUTH_ENABLED=true` and `API_KEY` to require `X-API-Key` on import endpoints.
+---
+
+The active application lives at the repository root. It stores sale events in `Auction`, vehicles in `Lot`, and processes queued CSV uploads with:
+
+```bash
+npm run import:worker
+```
+
+Do not run the legacy Alembic migrations or import script against the active database.

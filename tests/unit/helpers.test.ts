@@ -32,6 +32,8 @@ test('import schema resolves mapped fields and required headers by db field name
   ])
 
   assert.deepEqual(missing, [])
+
+  assert.deepEqual(getMissingRequiredFields(['Lot number']), [])
 })
 
 test('search helpers build stable where clauses', () => {

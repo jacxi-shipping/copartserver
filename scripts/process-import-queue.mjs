@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client'
 
 const db = new PrismaClient()
 const POLL_INTERVAL_MS = Math.max(Number.parseInt(process.env.IMPORT_WORKER_POLL_INTERVAL_MS ?? '5000', 10) || 5000, 1000)
+const RUN_ONCE = process.env.IMPORT_WORKER_ONCE === 'true'
 const UPSERT_BATCH_SIZE = 500
 const AUCTION_UPSERT_COLUMNS = [
   'sourceId',
@@ -121,14 +122,20 @@ function parseBoolean(value) {
   return null
 }
 
-function normalizeImageUrl(value, lotNumber) {
+function inventoryImageUrl(lotNumber, locationCountry) {
+  const country = String(locationCountry ?? '').trim().toLowerCase()
+  const countryCode = country === 'canada' || country === 'ca' ? 'ca' : 'us'
+  return `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=${countryCode}&brand=cprt`
+}
+
+function normalizeImageUrl(value, lotNumber, locationCountry) {
   const source = value?.replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$2').trim()
-  if (!source) return lotNumber ? `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=us&brand=cprt` : null
+  if (!source) return lotNumber ? inventoryImageUrl(lotNumber, locationCountry) : null
 
   const absoluteUrl = /^https?:\/\//i.test(source) ? source : `https://${source}`
   if (/inventoryv2\.copart\.io\/v1\/lotImages/i.test(absoluteUrl)) return absoluteUrl
   if (lotNumber && /(?:^|\.)copart\.com\//i.test(absoluteUrl)) {
-    return `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=us&brand=cprt`
+    return inventoryImageUrl(lotNumber, locationCountry)
   }
   return absoluteUrl
 }
@@ -304,8 +311,8 @@ function mapRow(rawRow, headerMap, jobId, filePath) {
   const lotNumber = mappedRow.lotNumber
   if (!lotNumber) return null
 
-  mappedRow.imageUrl = normalizeImageUrl(rawRow[headerMap.get('image_url') ?? ''], lotNumber)
-  mappedRow.imageThumbnail = normalizeImageUrl(rawRow[headerMap.get('image_thumbnail') ?? ''], lotNumber)
+  mappedRow.imageUrl = normalizeImageUrl(rawRow[headerMap.get('image_url') ?? ''], lotNumber, mappedRow.locationCountry)
+  mappedRow.imageThumbnail = normalizeImageUrl(rawRow[headerMap.get('image_thumbnail') ?? ''], lotNumber, mappedRow.locationCountry)
 
   mappedRow.searchText = buildSearchText(mappedRow)
   mappedRow.sourceFile = path.basename(filePath)
@@ -352,7 +359,7 @@ function auctionData(mappedRow) {
   const { yardNumber, yardName, saleDate, saleTime, timeZone, lotNumber } = mappedRow
   const saleKey = saleDate
     ? `${yardNumber ?? 'unknown'}:${saleDate}:${saleTime ?? 'unknown'}:${timeZone ?? 'unknown'}`
-    : `unscheduled:${yardNumber ?? 'unknown'}:${lotNumber}`
+    : `unscheduled:${yardNumber ?? 'unknown'}:${timeZone ?? 'unknown'}`
 
   return { saleKey, yardNumber: yardNumber ?? null, yardName: yardName ?? null, saleDate: saleDate ?? null, saleTime: saleTime ?? null, timeZone: timeZone ?? null }
 }
@@ -394,34 +401,31 @@ async function applyRowMutation(client, mappedRow, result) {
 }
 
 async function bulkUpsertRows(rows, result) {
-  const { rows: deduplicatedRows, skippedRows: duplicateSkips } = deduplicateRows(rows)
-
-  result.skippedRows += duplicateSkips
-  if (deduplicatedRows.length === 0) {
-    result.processedRows += rows.length
-    return
-  }
-
-  for (let start = 0; start < deduplicatedRows.length; start += UPSERT_BATCH_SIZE) {
-    const batch = deduplicatedRows.slice(start, start + UPSERT_BATCH_SIZE)
+  for (let start = 0; start < rows.length; start += UPSERT_BATCH_SIZE) {
+    const batch = rows.slice(start, start + UPSERT_BATCH_SIZE)
+    const batchResult = { processedRows: 0, insertedRows: 0, updatedRows: 0, skippedRows: 0 }
     await db.$transaction(async (tx) => {
-      for (const row of batch) await applyRowMutation(tx, row, result)
+      for (const row of batch) await applyRowMutation(tx, row, batchResult)
     })
+    result.processedRows += batchResult.processedRows
+    result.insertedRows += batchResult.insertedRows
+    result.updatedRows += batchResult.updatedRows
+    result.skippedRows += batchResult.skippedRows
   }
-
-  result.processedRows += rows.length
 }
 
 async function flushBatch(rows, result, onProgress) {
   if (rows.length === 0) return
+  const { rows: deduplicatedRows, skippedRows: duplicateSkips } = deduplicateRows(rows)
+  result.skippedRows += duplicateSkips
 
   try {
-    await bulkUpsertRows(rows, result)
+    await bulkUpsertRows(deduplicatedRows, result)
   } catch (batchErr) {
     const errMsg = batchErr instanceof Error ? batchErr.message : String(batchErr)
-    console.error(`Bulk upsert failed for ${rows.length} rows (${errMsg}), falling back to individual row processing...`)
+    console.error(`Bulk upsert failed for ${deduplicatedRows.length} rows (${errMsg}), falling back to individual row processing...`)
 
-    for (const mappedRow of rows) {
+    for (const mappedRow of deduplicatedRows) {
       try {
         await applyRowMutation(db, mappedRow, result)
       } catch (rowErr) {
@@ -602,13 +606,14 @@ async function claimNextJob() {
 }
 
 async function main() {
-  console.log(`Import worker polling every ${POLL_INTERVAL_MS}ms`)
+  console.log(RUN_ONCE ? 'Import worker processing one queued job' : `Import worker polling every ${POLL_INTERVAL_MS}ms`)
 
   while (true) {
     try {
       const job = await claimNextJob()
 
       if (!job) {
+        if (RUN_ONCE) return
         console.log('No queued import jobs found; waiting for work')
         await sleep(POLL_INTERVAL_MS)
         continue
@@ -617,6 +622,7 @@ async function main() {
       console.log(`Processing import job ${job.id} (${job.filename})`)
       await processJob(job.id)
       console.log(`Finished import job ${job.id}`)
+      if (RUN_ONCE) return
     } catch (error) {
       console.error('Import worker loop error:', error)
       await sleep(POLL_INTERVAL_MS)

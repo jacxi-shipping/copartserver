@@ -5,10 +5,6 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
-from app.api.auctions import router as auctions_router
-from app.api.imports import router as imports_router
-from app.api.search import router as search_router
-from app.api.stats import router as stats_router
 from app.config import get_settings
 from app.logging import RequestLoggingMiddleware, configure_logging
 
@@ -36,10 +32,20 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-API-Key", "X-Request-ID"],
 )
 app.include_router(health_router)
-app.include_router(auctions_router)
-app.include_router(imports_router)
-app.include_router(search_router)
-app.include_router(stats_router)
+
+
+@app.api_route("/api/v1/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def retired_data_api(path: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=410,
+        content={
+            "success": False,
+            "error": {
+                "code": "LEGACY_API_RETIRED",
+                "message": "Use the Next.js API and Prisma import worker for auction data.",
+            },
+        },
+    )
 
 @app.exception_handler(Exception)
 async def unhandled_error(_: Request, __: Exception) -> JSONResponse:

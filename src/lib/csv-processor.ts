@@ -40,14 +40,20 @@ function parseBoolean(value: string | undefined | null): boolean | null {
   return null
 }
 
-function normalizeImageUrl(value: string | undefined | null, lotNumber: number | null): string | null {
+function inventoryImageUrl(lotNumber: number, locationCountry: unknown): string {
+  const country = String(locationCountry ?? '').trim().toLowerCase()
+  const countryCode = country === 'canada' || country === 'ca' ? 'ca' : 'us'
+  return `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=${countryCode}&brand=cprt`
+}
+
+function normalizeImageUrl(value: string | undefined | null, lotNumber: number | null, locationCountry: unknown): string | null {
   const source = value?.replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$2').trim()
-  if (!source) return lotNumber ? `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=us&brand=cprt` : null
+  if (!source) return lotNumber ? inventoryImageUrl(lotNumber, locationCountry) : null
 
   const absoluteUrl = /^https?:\/\//i.test(source) ? source : `https://${source}`
   if (/inventoryv2\.copart\.io\/v1\/lotImages/i.test(absoluteUrl)) return absoluteUrl
   if (lotNumber && /(?:^|\.)copart\.com\//i.test(absoluteUrl)) {
-    return `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=us&brand=cprt`
+    return inventoryImageUrl(lotNumber, locationCountry)
   }
   return absoluteUrl
 }
@@ -162,8 +168,8 @@ function mapRow(rawRow: Record<string, string>, headerMap: Map<string, string>, 
   const lotNumber = mappedRow.lotNumber as number | undefined
   if (!lotNumber) return null
 
-  mappedRow.imageUrl = normalizeImageUrl(rawRow[headerMap.get('image_url') ?? ''], lotNumber)
-  mappedRow.imageThumbnail = normalizeImageUrl(rawRow[headerMap.get('image_thumbnail') ?? ''], lotNumber)
+  mappedRow.imageUrl = normalizeImageUrl(rawRow[headerMap.get('image_url') ?? ''], lotNumber, mappedRow.locationCountry)
+  mappedRow.imageThumbnail = normalizeImageUrl(rawRow[headerMap.get('image_thumbnail') ?? ''], lotNumber, mappedRow.locationCountry)
 
   mappedRow.searchText = buildSearchText(mappedRow)
   mappedRow.sourceFile = path.basename(filePath)
@@ -181,7 +187,7 @@ function auctionData(mappedRow: Record<string, unknown>): Prisma.AuctionUnchecke
   const lotNumber = mappedRow.lotNumber as number
   const saleKey = saleDate
     ? `${yardNumber ?? 'unknown'}:${saleDate}:${saleTime ?? 'unknown'}:${timeZone ?? 'unknown'}`
-    : `unscheduled:${yardNumber ?? 'unknown'}:${lotNumber}`
+    : `unscheduled:${yardNumber ?? 'unknown'}:${timeZone ?? 'unknown'}`
 
   return {
     saleKey,
