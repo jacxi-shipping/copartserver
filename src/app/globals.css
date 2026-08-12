@@ -296,7 +296,69 @@ button {
 }
 
 body {
-  animation: pageLoad 0.3s ease-out;
+  animation: pageLoad 0.2s ease-out;
+  background-image: linear-gradient(90deg, oklch(0.5 0 0 / 2%) 1px, transparent 1px), linear-gradient(oklch(0.5 0 0 / 2%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark body {
+  background-image: linear-gradient(90deg, oklch(1 0 0 / 3%) 1px, transparent 1px), linear-gradient(oklch(1 0 0 / 3%) 1px, transparent 1px);
+}
+
+.app-workspace {
+  width: 100%;
+  min-width: 0;
+  max-width: 1920px;
+  margin: 0 auto;
+}
+
+.app-workspace .rounded-xl {
+  border-radius: 0.5rem;
+}
+
+.app-workspace [role="button"],
+.app-workspace button,
+.app-workspace input,
+.app-workspace [data-slot="select-trigger"] {
+  min-height: 2.25rem;
+}
+
+.app-workspace table {
+  min-width: 680px;
+}
+
+.app-workspace thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: color-mix(in oklch, var(--card) 94%, var(--muted));
+}
+
+.app-workspace th {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.app-workspace td {
+  vertical-align: middle;
+}
+
+@media (max-width: 640px) {
+  .app-workspace {
+    padding: 0.75rem;
+  }
+
+  .app-workspace .text-2xl {
+    font-size: 1.35rem;
+    line-height: 1.75rem;
+  }
+
+  .app-workspace [data-auction-run-list] > div:first-child {
+    align-items: flex-start;
+  }
 }
 
 /* ─── Sidebar menu button hover ripple ──────────────────────────────────── */
@@ -317,6 +379,16 @@ body {
 }
 .sidebar-menu-button:hover::after {
   opacity: 1;
+}
+
+.sidebar-menu-button[data-active="true"] {
+  background: oklch(0.696 0.17 162.48 / 12%);
+  color: oklch(0.46 0.12 162.48);
+}
+
+.dark .sidebar-menu-button[data-active="true"] {
+  background: oklch(0.696 0.17 162.48 / 18%);
+  color: oklch(0.82 0.12 162.48);
 }
 
 /* ─── Sheet overlay backdrop blur ───────────────────────────────────────── */
@@ -360,9 +432,7 @@ body {
   transform-style: preserve-3d;
   perspective: 1000px;
 }
-.tilt-card:hover {
-  transform: rotateY(-2deg) rotateX(1deg) translateZ(4px);
-}
+.tilt-card:hover { transform: none; }
 .tilt-card .tilt-card-inner {
   transform: translateZ(20px);
 }
@@ -414,6 +484,17 @@ textarea:focus-visible {
 }
 .pulse-glow-emerald {
   animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ─── Better hover states for interactive cards ──────────────────────────── */

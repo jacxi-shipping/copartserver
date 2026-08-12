@@ -1,26 +1,15 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-
-function titleRisk(lot: { saleTitleType: string | null; saleTitleState: string | null; damageDescription: string | null; secondaryDamage: string | null }) {
-  const title = `${lot.saleTitleType ?? ''} ${lot.saleTitleState ?? ''}`.toUpperCase()
-  const damage = `${lot.damageDescription ?? ''} ${lot.secondaryDamage ?? ''}`.toUpperCase()
-  const flags = [
-    ...(title.includes('SALVAGE') ? ['Salvage title'] : []),
-    ...(title.includes('NON-REPAIRABLE') || title.includes('JUNK') ? ['Non-repairable or junk title'] : []),
-    ...(damage.includes('FLOOD') ? ['Flood damage reported'] : []),
-    ...(damage.includes('BURN') || damage.includes('FIRE') ? ['Fire damage reported'] : []),
-  ]
-  return { level: flags.length === 0 ? 'review' : title.includes('NON-REPAIRABLE') || title.includes('JUNK') ? 'high' : 'elevated', flags }
-}
+import { calculateTitleRisk } from '@/lib/risk-helpers'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ lotNumber: string }> }) {
   const { lotNumber } = await params
   if (!/^\d+$/.test(lotNumber)) return NextResponse.json({ success: false, error: { code: 'INVALID_LOT_NUMBER', message: 'A numeric lot number is required' } }, { status: 400 })
 
-  const lot = await db.lot.findUnique({ where: { lotNumber: Number(lotNumber) }, select: { vin: true, make: true, modelGroup: true, year: true, saleTitleType: true, saleTitleState: true, damageDescription: true, secondaryDamage: true } })
+  const lot = await db.lot.findUnique({ where: { lotNumber: Number(lotNumber) }, select: { vin: true, make: true, modelGroup: true, year: true, saleTitleType: true, saleTitleState: true, damageDescription: true, secondaryDamage: true, hasKeys: true } })
   if (!lot) return NextResponse.json({ success: false, error: { code: 'LOT_NOT_FOUND', message: 'Lot was not found' } }, { status: 404 })
 
-  const risk = titleRisk(lot)
+  const risk = calculateTitleRisk(lot)
   if (!lot.vin || lot.vin.length !== 17) return NextResponse.json({ success: true, data: { vin: null, recalls: [], titleRisk: risk } })
 
   try {

@@ -83,7 +83,7 @@ function getSaleStatusBadge(status: string | null) {
 }
 
 function EnrichmentSection({ vehicle }: { vehicle: Auction }) {
-  const [data, setData] = useState<{ vin: { bodyClass: string | null; driveType: string | null; engine: string | null } | null; recalls: Array<{ campaign: string | null; component: string | null; summary: string | null }>; titleRisk: { level: string; flags: string[] } } | null>(null)
+  const [data, setData] = useState<{ vin: { bodyClass: string | null; driveType: string | null; engine: string | null } | null; recalls: Array<{ campaign: string | null; component: string | null; summary: string | null }>; titleRisk: { score: number; level: string; flags: string[] } } | null>(null)
   useEffect(() => {
     let cancelled = false
     const timeout = setTimeout(() => {
@@ -92,7 +92,12 @@ function EnrichmentSection({ vehicle }: { vehicle: Auction }) {
     return () => { cancelled = true; clearTimeout(timeout) }
   }, [vehicle.lotNumber])
   if (!data) return null
-  return <SectionCard title="VIN, Recalls & Title Risk" icon={ShieldAlert} accent={data.titleRisk.level === 'high' ? 'border-red-300' : data.titleRisk.level === 'elevated' ? 'border-amber-300' : undefined}><div className="space-y-2 text-xs"><p><strong>Title risk:</strong> {data.titleRisk.level}</p>{data.titleRisk.flags.map((flag) => <p key={flag} className="text-amber-700 dark:text-amber-300">{flag}</p>)}{data.vin && <p>Decoded: {data.vin.bodyClass ?? '—'} · {data.vin.driveType ?? '—'} · {data.vin.engine ?? '—'}</p>}<p><strong>NHTSA recalls:</strong> {data.recalls.length}</p>{data.recalls.slice(0, 2).map((recall) => <p key={recall.campaign} className="text-muted-foreground">{recall.campaign ?? 'Recall'} · {recall.component ?? 'Vehicle'}{recall.summary ? `: ${recall.summary}` : ''}</p>)}</div></SectionCard>
+  const riskClass = data.titleRisk.level === 'high' ? 'text-rose-700 dark:text-rose-300' : data.titleRisk.level === 'elevated' ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'
+  return <SectionCard title="VIN, Recalls & Title Risk" icon={ShieldAlert} accent={data.titleRisk.level === 'high' ? 'border-red-300' : data.titleRisk.level === 'elevated' ? 'border-amber-300' : undefined}><div className="space-y-2 text-xs"><div className="flex items-center justify-between rounded-md bg-muted/50 px-2.5 py-2"><span className="font-semibold">Risk score</span><span className={`font-bold tabular-nums ${riskClass}`}>{data.titleRisk.score}/100 · {data.titleRisk.level}</span></div>{data.titleRisk.flags.map((flag) => <p key={flag} className={riskClass}>{flag}</p>)}{data.vin && <p>Decoded: {data.vin.bodyClass ?? '—'} · {data.vin.driveType ?? '—'} · {data.vin.engine ?? '—'}</p>}<p><strong>NHTSA recalls:</strong> {data.recalls.length}</p>{data.recalls.slice(0, 2).map((recall) => <p key={recall.campaign} className="text-muted-foreground">{recall.campaign ?? 'Recall'} · {recall.component ?? 'Vehicle'}{recall.summary ? `: ${recall.summary}` : ''}</p>)}</div></SectionCard>
+}
+
+function ComparableHistorySection() {
+  return <SectionCard title="Comparable Market History" icon={TrendingUp}><div className="space-y-1 text-xs text-muted-foreground"><p className="font-medium text-foreground">No market-data provider connected</p><p>Comparable sale history will appear here when a licensed market-data source is configured. Current retail and bid figures remain source CSV values.</p></div></SectionCard>
 }
 
 function LotImageGallery({ vehicle, label, fallback }: { vehicle: Auction; label: string; fallback: string | null }) {
@@ -102,15 +107,17 @@ function LotImageGallery({ vehicle, label, fallback }: { vehicle: Auction; label
 
   useEffect(() => {
     let cancelled = false
-    setImages([])
-    setActiveImage(0)
-    setImageFailed(false)
-    const country = vehicle.locationCountry?.toLowerCase() === 'canada' ? 'ca' : 'us'
-    fetch(`/api/lots/${vehicle.lotNumber}/images?country=${country}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload) => { if (!cancelled && payload?.success) setImages(payload.data ?? []) })
-      .catch(() => undefined)
-    return () => { cancelled = true }
+    const timeout = setTimeout(() => {
+      setImages([])
+      setActiveImage(0)
+      setImageFailed(false)
+      const country = vehicle.locationCountry?.toLowerCase() === 'canada' ? 'ca' : 'us'
+      fetch(`/api/lots/${vehicle.lotNumber}/images?country=${country}`)
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload) => { if (!cancelled && payload?.success) setImages(payload.data ?? []) })
+        .catch(() => undefined)
+    }, 0)
+    return () => { cancelled = true; clearTimeout(timeout) }
   }, [vehicle.lotNumber, vehicle.locationCountry])
 
   const source = images[activeImage] ?? fallback
@@ -237,7 +244,10 @@ function LotNotesSection({ vehicle }: { vehicle: Auction }) {
     finally { setLoading(false) }
   }, [vehicle.id])
 
-  useEffect(() => { fetchNotes() }, [fetchNotes])
+  useEffect(() => {
+    const timeout = setTimeout(() => { void fetchNotes() }, 0)
+    return () => clearTimeout(timeout)
+  }, [fetchNotes])
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return
@@ -348,7 +358,10 @@ function TagsSection({ vehicle }: { vehicle: Auction }) {
     finally { setLoading(false) }
   }, [vehicle.id])
 
-  useEffect(() => { fetchTags() }, [fetchTags])
+  useEffect(() => {
+    const timeout = setTimeout(() => { void fetchTags() }, 0)
+    return () => clearTimeout(timeout)
+  }, [fetchTags])
 
   const handleAddTag = async () => {
     if (!newTag.trim()) return
@@ -462,10 +475,15 @@ function BidCalculatorSection({ vehicle }: { vehicle: Auction }) {
   const [storageFee, setStorageFee] = useState(50)
   const [transportFee, setTransportFee] = useState(500)
   const [repairCost, setRepairCost] = useState(vehicle.repairCost || 0)
+  const [targetMargin, setTargetMargin] = useState(20)
 
   const buyerFee = useMemo(() => (bidAmount * buyerFeePct) / 100, [bidAmount, buyerFeePct])
   const totalInvestment = useMemo(() => bidAmount + buyerFee + docFee + storageFee + transportFee + repairCost, [bidAmount, buyerFee, docFee, storageFee, transportFee, repairCost])
   const retailValue = vehicle.estimatedRetailValue || 0
+  const fixedCosts = docFee + storageFee + transportFee + repairCost
+  const bidCeiling = retailValue > 0
+    ? Math.max(0, (retailValue * (1 - targetMargin / 100) - fixedCosts) / (1 + buyerFeePct / 100))
+    : 0
   const estimatedProfit = retailValue - totalInvestment
   const roi = totalInvestment > 0 ? (estimatedProfit / totalInvestment) * 100 : 0
   const investmentRatio = retailValue > 0 ? Math.min(100, (totalInvestment / retailValue) * 100) : 0
@@ -480,6 +498,7 @@ function BidCalculatorSection({ vehicle }: { vehicle: Auction }) {
           <CalcInput label="Storage Fee" value={storageFee} onChange={setStorageFee} prefix="$" />
           <CalcInput label="Transport Estimate" value={transportFee} onChange={setTransportFee} prefix="$" />
           <CalcInput label="Repair Cost" value={repairCost} onChange={setRepairCost} prefix="$" />
+          <CalcInput label="Target Margin" value={targetMargin} onChange={setTargetMargin} suffix="%" step={1} />
         </div>
 
         <Separator />
@@ -508,6 +527,14 @@ function BidCalculatorSection({ vehicle }: { vehicle: Auction }) {
         </div>
 
         <Separator />
+
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Bid Ceiling</p><p className="mt-0.5 text-[10px] text-emerald-700 dark:text-emerald-300">Maximum bid to retain a {targetMargin}% target margin.</p></div>
+            <span className="text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-300">{retailValue > 0 ? formatCurrency(bidCeiling) : 'Set retail value'}</span>
+          </div>
+          {retailValue > 0 && <p className="mt-2 text-[10px] text-emerald-700/80 dark:text-emerald-300/80">Retail {formatCurrency(retailValue)} − fixed costs {formatCurrency(fixedCosts)} − {buyerFeePct}% buyer fee.</p>}
+        </div>
 
         <div className="flex items-center justify-between rounded-lg bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5">
           <span className="text-xs font-semibold">Total Investment</span>
@@ -622,7 +649,8 @@ function SimilarVehiclesSection({ vehicle }: { vehicle: Auction }) {
   }, [vehicle.make, vehicle.bodyStyle, vehicle.id])
 
   useEffect(() => {
-    fetchSimilar()
+    const timeout = setTimeout(() => { void fetchSimilar() }, 0)
+    return () => clearTimeout(timeout)
   }, [fetchSimilar])
 
   if (!loading && similar.length === 0) return null
@@ -770,6 +798,7 @@ export function VehicleDetailSheet({ vehicle, open, onOpenChange }: VehicleDetai
             </div>
 
             <EnrichmentSection vehicle={vehicle} />
+            <ComparableHistorySection />
 
             {/* ─── Pricing Section ──────────────────────────────────────── */}
             <SectionCard title="Pricing" icon={DollarSign}>

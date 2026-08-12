@@ -7,6 +7,7 @@ import { getDbField, getMissingRequiredFields } from '../../src/lib/import-schem
 import { buildTextSearchWhere, buildUpcomingSaleDateWhere } from '../../src/lib/search-helpers.ts'
 import { formatSaleTime } from '../../src/lib/format.ts'
 import { auctionSaleKey, compareLaneGrid } from '../../src/lib/auction-helpers.ts'
+import { calculateTitleRisk } from '../../src/lib/risk-helpers.ts'
 
 test('CSV filenames are validated conservatively', () => {
   assert.equal(isCsvFilename('lots.csv'), true)
@@ -27,6 +28,13 @@ test('auction groups use yard, sale schedule, and timezone while unscheduled lot
 test('lane sorting is numeric-aware for auction run lists', () => {
   assert.ok(compareLaneGrid('A2', 'A10') < 0)
   assert.ok(compareLaneGrid('1A007', '1C011') < 0)
+})
+
+test('risk scoring explains salvage, flood, and missing-key exposure', () => {
+  const risk = calculateTitleRisk({ saleTitleType: 'SALVAGE', saleTitleState: 'CA', damageDescription: 'FLOOD', secondaryDamage: null, hasKeys: false })
+  assert.equal(risk.level, 'high')
+  assert.ok(risk.score >= 75)
+  assert.deepEqual(risk.flags, ['Salvage title', 'Flood damage reported', 'Keys are not included'])
 })
 
 test('import schema resolves mapped fields and required headers by db field name', () => {

@@ -312,13 +312,13 @@ function VehiclePie({ data }: { data: ChartItem[] }) {
           </motion.div>
           {/* Legend */}
           {total > 0 && (
-            <div className="flex items-center gap-4 text-xs">
+            <div className="flex max-w-full flex-wrap justify-center gap-x-3 gap-y-1.5 text-xs">
               {data.map((item) => {
                 const pct = ((item.count / total) * 100).toFixed(1)
-                const label = item.name === 'V' ? 'Vehicle' : 'Truck/Other'
+                const label = item.name === 'V' ? 'Vehicle' : item.name || 'Other'
                 const clr = item.name === 'V' ? EMERALD : AMBER
                 return (
-                  <div key={item.name} className="flex items-center gap-1.5">
+                  <div key={item.name} className="flex min-w-0 items-center gap-1.5">
                     <div className="size-2 rounded-sm" style={{ backgroundColor: clr }} />
                     <span className="text-muted-foreground">{label}</span>
                     <span className="font-medium">{item.count.toLocaleString()}</span>

@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Car, Search, CalendarClock, Calendar, Import as FileImport, LayoutDashboard, Heart, Keyboard, Bell, Database, BarChart3,
+  Car, Search, CalendarClock, Calendar, Import as FileImport, LayoutDashboard, Heart, Keyboard, Bell, Database, BarChart3, BookOpen,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -43,6 +43,7 @@ import { UpcomingTab } from '@/components/auctions/upcoming-tab'
 import { TodayTab } from '@/components/auctions/today-tab'
 import { WatchlistTab } from '@/components/watchlist/watchlist-tab'
 import { AnalyticsTab } from '@/components/analytics/analytics-tab'
+import { ApiDocsTab } from '@/components/docs/api-docs-tab'
 
 // Shared components
 import { ThemeToggle } from '@/components/shared/theme-toggle'
@@ -61,6 +62,7 @@ const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: null },
   { id: 'search', label: 'Search', icon: Search, badge: null },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, badge: null },
+  { id: 'api-docs', label: 'API Docs', icon: BookOpen, badge: null },
   { id: 'import', label: 'Import', icon: FileImport, badge: null },
   { id: 'auctions', label: 'All Auctions', icon: Car, badge: null },
   { id: 'upcoming', label: 'Upcoming', icon: CalendarClock, badge: null },
@@ -126,7 +128,7 @@ function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-4 py-5">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-sm transition-transform duration-200 hover:scale-105 animate-pulse">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white shadow-sm">
             <Car className="size-4.5" />
           </div>
           <div className="group-data-[collapsible=icon]:hidden">
@@ -147,7 +149,7 @@ function AppSidebar() {
                     isActive={activeTab === item.id}
                     onClick={() => handleNavClick(item.id)}
                     tooltip={item.label}
-                    className="relative transition-all duration-200 hover:border-l-2 hover:border-emerald-500 hover:pl-5"
+                    className="relative transition-colors duration-150"
                   >
                     {/* Animated emerald dot for active item */}
                     {activeTab === item.id && (
@@ -182,7 +184,7 @@ function AppSidebar() {
                   isActive={activeTab === 'watchlist'}
                   onClick={() => handleNavClick('watchlist')}
                   tooltip={`${watchlist.length} watchlisted`}
-                  className="relative transition-all duration-200 hover:border-l-2 hover:border-emerald-500 hover:pl-5"
+                  className="relative transition-colors duration-150"
                 >
                   {activeTab === 'watchlist' && (
                     <span className="absolute left-1.5 top-1/2 -translate-y-1/2 size-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -486,7 +488,7 @@ export default function HomePage() {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-4 md:p-6">
+          <main className="app-workspace flex-1 p-4 md:p-6">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -502,6 +504,7 @@ export default function HomePage() {
                 {activeTab === 'upcoming' && <UpcomingTab />}
                 {activeTab === 'today' && <TodayTab />}
                 {activeTab === 'analytics' && <AnalyticsTab />}
+                {activeTab === 'api-docs' && <ApiDocsTab />}
                 {activeTab === 'watchlist' && <WatchlistTab />}
               </motion.div>
             </AnimatePresence>

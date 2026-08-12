@@ -657,7 +657,7 @@ export function ImportTab() {
 
       {/* ─── Upload Progress Bar ─────────────────────────────────────── */}
       <AnimatePresence>
-        {(uploadPhase === 'uploading' || uploadPhase === 'processing' || uploadPhase === 'error') && (
+        {(uploadPhase === 'uploading' || uploadPhase === 'queued' || uploadPhase === 'processing' || uploadPhase === 'error') && (
           <UploadProgressBar
             phase={uploadPhase}
             progress={uploadProgress}
@@ -784,13 +784,10 @@ export function ImportTab() {
         </div>
 
         {/* File type info */}
-        <div className="mt-3 rounded-lg bg-muted/30 px-4 py-3">
-          <div className="flex items-start gap-2">
-            <FileText className="size-3.5 text-muted-foreground mt-0.5 shrink-0" />
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Supported columns: Lot Number, Year, Make, Model, VIN, Sale Date, Sale Status, Location, Estimated Retail Value, Odometer, Damage Description, Fuel Type, Transmission, Drive, Body Style, Color, Engine, Cylinders, Has Keys, Runs & Drives, Repair Cost, Buy It Now Price, Sale Title State, Sale Title Type, Yard Name, Yard Number, AutoGrade
-            </p>
-          </div>
+        <div className="mt-3 grid gap-2 rounded-md border bg-muted/20 px-4 py-3 text-xs text-muted-foreground sm:grid-cols-3">
+          <div className="flex items-center gap-2"><FileText className="size-3.5 shrink-0" /><span><strong className="text-foreground">Required:</strong> lot number</span></div>
+          <div><strong className="text-foreground">Auction grouping:</strong> yard, date, time, timezone</div>
+          <div><strong className="text-foreground">Optional:</strong> vehicle, pricing, title, media, lane</div>
         </div>
       </motion.div>
 
