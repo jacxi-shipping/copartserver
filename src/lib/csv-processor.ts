@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import fs from 'fs'
 import path from 'path'
 import { buildHeaderMap, getDbField, getMissingRequiredFields } from '@/lib/import-schema'
+import { auctionSaleKey } from '@/lib/auction-helpers'
 
 function parseSaleDate(value: string | undefined | null): string | null {
   if (!value || value.trim() === '' || value.trim() === '0') return null
@@ -184,10 +185,7 @@ function auctionData(mappedRow: Record<string, unknown>): Prisma.AuctionUnchecke
   const saleDate = mappedRow.saleDate as string | null | undefined
   const saleTime = mappedRow.saleTime as string | null | undefined
   const timeZone = mappedRow.timeZone as string | null | undefined
-  const lotNumber = mappedRow.lotNumber as number
-  const saleKey = saleDate
-    ? `${yardNumber ?? 'unknown'}:${saleDate}:${saleTime ?? 'unknown'}:${timeZone ?? 'unknown'}`
-    : `unscheduled:${yardNumber ?? 'unknown'}:${timeZone ?? 'unknown'}`
+  const saleKey = auctionSaleKey({ yardNumber, saleDate, saleTime, timeZone })
 
   return {
     saleKey,

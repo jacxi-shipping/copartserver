@@ -61,7 +61,7 @@ interface StateData {
 interface LocationAnalysis {
   states: StateData[]
   cities: { city: string; count: number }[]
-  yards: { yard: string; count: number }[]
+  yards: { yard: string; yardNumber: number | null; count: number; auctionCount: number; totalRetailValue: number; totalHighBid: number; totalRepairCost: number }[]
 }
 
 // ─── Animation Variants ────────────────────────────────────────────────────
@@ -483,7 +483,7 @@ function TopCitiesList({ cities }: { cities: { city: string; count: number }[] }
   )
 }
 
-function YardDistribution({ yards }: { yards: { yard: string; count: number }[] }) {
+function YardDistribution({ yards }: { yards: LocationAnalysis['yards'] }) {
   const maxCount = Math.max(...yards.map((y) => y.count), 1)
   return (
     <Card className="overflow-hidden">
@@ -492,7 +492,7 @@ function YardDistribution({ yards }: { yards: { yard: string; count: number }[] 
           <Warehouse className="size-4 text-teal-500" />
           Yard Distribution
         </CardTitle>
-        <CardDescription>Top 15 yards by lot count</CardDescription>
+        <CardDescription>Lots, sale events, bids, value, and repair exposure</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
@@ -507,9 +507,7 @@ function YardDistribution({ yards }: { yards: { yard: string; count: number }[] 
                 viewport={{ once: true }}
                 transition={{ duration: 0.3, delay: i * 0.03 }}
               >
-                <span className="w-28 shrink-0 truncate text-xs font-medium text-muted-foreground" title={y.yard}>
-                  {y.yard}
-                </span>
+                <div className="w-28 shrink-0"><span className="block truncate text-xs font-medium text-muted-foreground" title={y.yard}>{y.yard}</span><span className="text-[10px] text-muted-foreground">{y.auctionCount} auctions · {formatCurrency(y.totalRetailValue)}</span></div>
                 <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/50">
                   <motion.div
                     className="absolute inset-y-0 left-0 rounded bg-gradient-to-r from-teal-500 to-emerald-500"
@@ -519,7 +517,7 @@ function YardDistribution({ yards }: { yards: { yard: string; count: number }[] 
                     transition={{ duration: 0.5, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
                   />
                 </div>
-                <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums">{y.count}</span>
+                <div className="w-16 shrink-0 text-right"><span className="block text-xs font-semibold tabular-nums">{y.count}</span><span className="text-[10px] text-muted-foreground">Bid {formatCurrency(y.totalHighBid)}</span></div>
               </motion.div>
             )
           })}

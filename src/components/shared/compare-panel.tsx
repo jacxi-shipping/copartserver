@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GitCompare, X, Loader2, Trophy, Settings2, DollarSign, Gauge, Clock } from 'lucide-react'
+import { Download, FileJson, GitCompare, X, Loader2, Trophy, Settings2, DollarSign, Gauge, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -99,6 +99,13 @@ export function ComparePanel() {
   const [vehicles, setVehicles] = useState<Auction[]>([])
   const [loading, setLoading] = useState(false)
 
+  const downloadReport = (format: 'csv' | 'json') => {
+    const link = document.createElement('a')
+    link.href = `/api/compare/report?ids=${compareList.join(',')}&format=${format}`
+    link.download = `lot-comparison.${format}`
+    link.click()
+  }
+
   const fetchVehicles = useCallback(async () => {
     if (compareList.length === 0) {
       setVehicles([])
@@ -123,7 +130,10 @@ export function ComparePanel() {
   }, [compareList])
 
   useEffect(() => {
-    fetchVehicles()
+    const timeout = setTimeout(() => {
+      void fetchVehicles()
+    }, 0)
+    return () => clearTimeout(timeout)
   }, [fetchVehicles])
 
   if (compareList.length === 0 && vehicles.length === 0) return null
@@ -160,13 +170,13 @@ export function ComparePanel() {
           <SheetHeader className="px-6 pt-4 pb-2">
             <SheetTitle className="flex items-center gap-2">
               <GitCompare className="size-5" />
-              Compare Vehicles
+              Compare Lots
               <Badge variant="secondary" className="ml-1">
                 {compareList.length}/3
               </Badge>
             </SheetTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Side-by-side comparison of key vehicle attributes
+              Side-by-side comparison across auction events
             </p>
           </SheetHeader>
 
@@ -256,7 +266,9 @@ export function ComparePanel() {
               </div>
 
               {/* ─── Clear All Button ───────────────────────────────────── */}
-              <div className="mt-6 flex justify-center">
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                <Button variant="outline" onClick={() => downloadReport('csv')}><Download className="mr-2 size-4" />Export CSV</Button>
+                <Button variant="outline" onClick={() => downloadReport('json')}><FileJson className="mr-2 size-4" />Export JSON</Button>
                 <Button
                   className="bg-gradient-to-r from-rose-500 to-rose-600 text-white hover:from-rose-600 hover:to-rose-700"
                   onClick={clearCompare}

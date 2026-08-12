@@ -18,6 +18,7 @@ import { Progress } from '@/components/ui/progress'
 import {
   DollarSign, TrendingUp, Wrench, Tag, Zap, Key, Gauge, Fuel, Activity, Car, MapPin, Loader2,
   StickyNote, Trash2, Calculator, Plus, X,
+  ShieldAlert,
 } from 'lucide-react'
 import type { Auction } from '@/lib/types'
 import {
@@ -79,6 +80,19 @@ function getSaleStatusBadge(status: string | null) {
     )
   }
   return <Badge variant="outline">{status}</Badge>
+}
+
+function EnrichmentSection({ vehicle }: { vehicle: Auction }) {
+  const [data, setData] = useState<{ vin: { bodyClass: string | null; driveType: string | null; engine: string | null } | null; recalls: Array<{ campaign: string | null; component: string | null; summary: string | null }>; titleRisk: { level: string; flags: string[] } } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const timeout = setTimeout(() => {
+      fetch(`/api/lots/${vehicle.lotNumber}/enrichment`).then((response) => response.ok ? response.json() : null).then((payload) => { if (!cancelled && payload?.success) setData(payload.data) }).catch(() => undefined)
+    }, 0)
+    return () => { cancelled = true; clearTimeout(timeout) }
+  }, [vehicle.lotNumber])
+  if (!data) return null
+  return <SectionCard title="VIN, Recalls & Title Risk" icon={ShieldAlert} accent={data.titleRisk.level === 'high' ? 'border-red-300' : data.titleRisk.level === 'elevated' ? 'border-amber-300' : undefined}><div className="space-y-2 text-xs"><p><strong>Title risk:</strong> {data.titleRisk.level}</p>{data.titleRisk.flags.map((flag) => <p key={flag} className="text-amber-700 dark:text-amber-300">{flag}</p>)}{data.vin && <p>Decoded: {data.vin.bodyClass ?? '—'} · {data.vin.driveType ?? '—'} · {data.vin.engine ?? '—'}</p>}<p><strong>NHTSA recalls:</strong> {data.recalls.length}</p>{data.recalls.slice(0, 2).map((recall) => <p key={recall.campaign} className="text-muted-foreground">{recall.campaign ?? 'Recall'} · {recall.component ?? 'Vehicle'}{recall.summary ? `: ${recall.summary}` : ''}</p>)}</div></SectionCard>
 }
 
 function LotImageGallery({ vehicle, label, fallback }: { vehicle: Auction; label: string; fallback: string | null }) {
@@ -754,6 +768,8 @@ export function VehicleDetailSheet({ vehicle, open, onOpenChange }: VehicleDetai
                 </div>
               )}
             </div>
+
+            <EnrichmentSection vehicle={vehicle} />
 
             {/* ─── Pricing Section ──────────────────────────────────────── */}
             <SectionCard title="Pricing" icon={DollarSign}>

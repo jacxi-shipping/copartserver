@@ -76,10 +76,11 @@ export async function GET() {
         count: g._count.locationCity,
       }))
 
-    // Top 15 yards by count
+    // Top 15 yards by lot count with operational and value metrics.
     const yardGroups = await db.lot.groupBy({
-      by: ['yardName'],
+      by: ['yardName', 'yardNumber'],
       _count: { yardName: true },
+      _sum: { estimatedRetailValue: true, highBid: true, repairCost: true },
       where: {
         AND: [
           { yardName: { not: null } },
@@ -90,12 +91,17 @@ export async function GET() {
       take: 15,
     })
 
-    const yards = yardGroups
-      .filter((g) => g.yardName !== null)
-      .map((g) => ({
-        yard: g.yardName as string,
-        count: g._count.yardName,
-      }))
+    const auctionCounts = await db.auction.groupBy({ by: ['yardNumber'], _count: { id: true } })
+    const auctionsByYard = new Map(auctionCounts.map((item) => [item.yardNumber, item._count.id]))
+    const yards = yardGroups.filter((group) => group.yardName !== null).map((group) => ({
+      yard: group.yardName as string,
+      yardNumber: group.yardNumber,
+      count: group._count.yardName,
+      auctionCount: auctionsByYard.get(group.yardNumber) ?? 0,
+      totalRetailValue: group._sum.estimatedRetailValue ?? 0,
+      totalHighBid: group._sum.highBid ?? 0,
+      totalRepairCost: group._sum.repairCost ?? 0,
+    }))
 
     return NextResponse.json({
       success: true,

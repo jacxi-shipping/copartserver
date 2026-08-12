@@ -6,6 +6,7 @@ import { isCsvFilename } from '../../src/lib/import-validation.ts'
 import { getDbField, getMissingRequiredFields } from '../../src/lib/import-schema.ts'
 import { buildTextSearchWhere, buildUpcomingSaleDateWhere } from '../../src/lib/search-helpers.ts'
 import { formatSaleTime } from '../../src/lib/format.ts'
+import { auctionSaleKey, compareLaneGrid } from '../../src/lib/auction-helpers.ts'
 
 test('CSV filenames are validated conservatively', () => {
   assert.equal(isCsvFilename('lots.csv'), true)
@@ -16,6 +17,16 @@ test('CSV filenames are validated conservatively', () => {
 test('sale times support normalized and compact CSV forms', () => {
   assert.equal(formatSaleTime('11:00'), '11:00 AM')
   assert.equal(formatSaleTime('1200'), '12:00 PM')
+})
+
+test('auction groups use yard, sale schedule, and timezone while unscheduled lots share an event', () => {
+  assert.equal(auctionSaleKey({ yardNumber: 832, saleDate: '2026-08-10', saleTime: '11:00', timeZone: 'CDT' }), '832:2026-08-10:11:00:CDT')
+  assert.equal(auctionSaleKey({ yardNumber: 832, saleDate: null, saleTime: null, timeZone: 'CDT' }), 'unscheduled:832:CDT')
+})
+
+test('lane sorting is numeric-aware for auction run lists', () => {
+  assert.ok(compareLaneGrid('A2', 'A10') < 0)
+  assert.ok(compareLaneGrid('1A007', '1C011') < 0)
 })
 
 test('import schema resolves mapped fields and required headers by db field name', () => {

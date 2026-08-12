@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { buildPagination, parsePagination } from '@/lib/query-builder'
+import { compareLaneGrid } from '@/lib/auction-helpers'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ auctionId: string }> }) {
   try {
@@ -20,7 +21,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       db.lot.findMany({ where, orderBy: [{ gridRow: 'asc' }, { lotNumber: 'asc' }], skip, take: pageSize }),
       db.lot.count({ where }),
     ])
-    return NextResponse.json({ success: true, data: { auction, lots }, pagination: buildPagination(page, pageSize, total) })
+    const laneOrderedLots = [...lots].sort((first, second) => compareLaneGrid(first.gridRow, second.gridRow) || first.lotNumber - second.lotNumber)
+    return NextResponse.json({ success: true, data: { auction, lots: laneOrderedLots }, pagination: buildPagination(page, pageSize, total) })
   } catch (error) {
     console.error('Auction detail API error:', error)
     return NextResponse.json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to load auction lots' } }, { status: 500 })
