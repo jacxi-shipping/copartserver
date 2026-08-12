@@ -9,9 +9,11 @@ export async function GET(request: NextRequest) {
     const { page, pageSize, skip } = parsePagination(searchParams)
     const query = searchParams.get('q')?.trim()
     const saleDate = searchParams.get('saleDate')?.trim()
+    const state = searchParams.get('state')?.trim().toUpperCase()
     const numericYard = query && /^\d+$/.test(query) ? Number(query) : undefined
     const where: Prisma.AuctionWhereInput = {
       ...(saleDate ? { saleDate } : {}),
+      ...(state ? { lots: { some: { locationState: state } } } : {}),
       ...(query ? { OR: [{ yardName: { contains: query, mode: 'insensitive' } }, ...(numericYard === undefined ? [] : [{ yardNumber: numericYard }])] } : {}),
     }
 

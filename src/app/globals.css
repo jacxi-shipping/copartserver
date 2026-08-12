@@ -257,6 +257,37 @@ button {
   background-color: oklch(0.696 0.17 162.48 / 25%);
 }
 
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  header,
+  footer,
+  [data-sidebar="sidebar"],
+  [data-slot="sidebar-trigger"],
+  [role="dialog"],
+  [data-auction-run-list] button {
+    display: none !important;
+  }
+
+  [data-auction-run-list] {
+    display: block !important;
+  }
+
+  [data-auction-run-list] table {
+    width: 100% !important;
+    border-collapse: collapse;
+  }
+
+  [data-auction-run-list] th,
+  [data-auction-run-list] td {
+    border: 1px solid #d1d5db !important;
+    padding: 0.4rem !important;
+  }
+}
+
 /* ─── Smooth page load ───────────────────────────────────────────────────── */
 
 @keyframes pageLoad {

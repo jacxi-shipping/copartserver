@@ -4,6 +4,7 @@ import { buildAuctionFilters } from '@/lib/query-builder'
 
 const CSV_COLUMNS = [
   { key: 'lotNumber', label: 'Lot Number' },
+  { key: 'gridRow', label: 'Lane/Grid' },
   { key: 'year', label: 'Year' },
   { key: 'make', label: 'Make' },
   { key: 'modelGroup', label: 'Model' },
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
 
     // Support bulk export by IDs (comma-separated)
     const idsParam = searchParams.get('ids')
+    const auctionIdParam = searchParams.get('auctionId')
     const { where: filterWhere, sort } = buildAuctionFilters(searchParams)
     let where = filterWhere
     if (idsParam) {
@@ -55,11 +57,18 @@ export async function GET(request: NextRequest) {
         where = { id: { in: ids } }
       }
     }
+    if (auctionIdParam) {
+      const auctionId = Number(auctionIdParam)
+      if (!Number.isInteger(auctionId) || auctionId < 1) {
+        return NextResponse.json({ success: false, error: { code: 'INVALID_AUCTION_ID', message: 'Auction ID must be a positive integer' } }, { status: 400 })
+      }
+      where = { auctionId }
+    }
 
     // Fetch all matching auctions for export (no pagination)
     const auctions = await db.lot.findMany({
       where,
-      orderBy: (() => {
+      orderBy: auctionIdParam ? [{ gridRow: 'asc' }, { lotNumber: 'asc' }] : (() => {
         const [field, dir] = (sort || 'saleDate_asc').split('_')
         const direction = dir === 'desc' ? 'desc' : 'asc'
         // Map field names to DB fields
