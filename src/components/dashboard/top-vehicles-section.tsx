@@ -27,6 +27,7 @@ import {
   getVehicleLabel,
   getLocationLabel,
 } from '@/lib/format'
+import { getAuctionImageUrl } from '@/lib/images'
 import { useAppStore } from '@/lib/store'
 
 /* ------------------------------------------------------------------ */
@@ -201,9 +202,9 @@ function TopVehicleCard({ auction, rank, maxValue }: { auction: Auction; rank: n
       <Card className="group overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
         {/* Image / Placeholder */}
         <div className="relative aspect-video overflow-hidden bg-muted">
-          {auction.imageUrl ? (
+          {getAuctionImageUrl(auction.imageThumbnail, auction.imageUrl) ? (
             <img
-              src={auction.imageUrl}
+              src={getAuctionImageUrl(auction.imageThumbnail, auction.imageUrl)!}
               alt={label}
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"

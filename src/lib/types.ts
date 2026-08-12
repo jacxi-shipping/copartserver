@@ -35,6 +35,7 @@ export interface Auction {
   bodyStyle: string | null
   color: string | null
   imageUrl: string | null
+  imageThumbnail: string | null
   vehicleType: string | null
   engine: string | null
   cylinders: number | null

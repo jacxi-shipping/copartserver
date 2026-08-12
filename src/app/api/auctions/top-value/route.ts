@@ -29,6 +29,7 @@ export async function GET() {
         saleStatus: true,
         fuelType: true,
         imageUrl: true,
+        imageThumbnail: true,
       },
     })
 

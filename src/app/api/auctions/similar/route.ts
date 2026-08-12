@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         estimatedRetailValue: true,
         saleDate: true,
         imageUrl: true,
+        imageThumbnail: true,
         damageDescription: true,
       },
       orderBy: { estimatedRetailValue: 'desc' },

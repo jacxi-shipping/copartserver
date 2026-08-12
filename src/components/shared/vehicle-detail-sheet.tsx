@@ -30,6 +30,7 @@ import {
   getVehicleLabel,
   getLocationLabel,
 } from '@/lib/format'
+import { getAuctionImageUrl } from '@/lib/images'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -541,6 +542,7 @@ interface SimilarVehicle {
   estimatedRetailValue: number | null
   saleDate: string | null
   imageUrl: string | null
+  imageThumbnail: string | null
   damageDescription: string | null
 }
 
@@ -603,8 +605,8 @@ function SimilarVehiclesSection({ vehicle }: { vehicle: Auction }) {
                 >
                   {/* Gradient placeholder */}
                   <div className={`relative aspect-[16/10] rounded-md overflow-hidden bg-gradient-to-br ${gradient} mb-2`}>
-                    {v.imageUrl ? (
-                      <img src={v.imageUrl} alt={label} className="h-full w-full object-cover" />
+                    {getAuctionImageUrl(v.imageThumbnail, v.imageUrl) ? (
+                      <img src={getAuctionImageUrl(v.imageThumbnail, v.imageUrl)!} alt={label} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
                         <span className="text-xl font-bold text-white/80">
@@ -652,6 +654,7 @@ export function VehicleDetailSheet({ vehicle, open, onOpenChange }: VehicleDetai
 
   const label = getVehicleLabel(vehicle)
   const gradient = getPlaceholderGradient(vehicle.make)
+  const imageSource = getAuctionImageUrl(vehicle.imageThumbnail, vehicle.imageUrl)
   const initials = getVehicleInitials(vehicle.make, vehicle.modelGroup || vehicle.modelDetail)
   const location = getLocationLabel(vehicle)
   const zip = vehicle.locationZip ? ` ${vehicle.locationZip}` : ''
@@ -697,9 +700,9 @@ export function VehicleDetailSheet({ vehicle, open, onOpenChange }: VehicleDetai
           <div className="px-4 pb-4 space-y-4">
             {/* Image Section */}
             <div className="relative aspect-video rounded-xl overflow-hidden bg-muted shadow-inner">
-              {vehicle.imageUrl ? (
+              {imageSource ? (
                 <img
-                  src={vehicle.imageUrl}
+                  src={imageSource}
                   alt={label}
                   className="h-full w-full object-cover"
                 />

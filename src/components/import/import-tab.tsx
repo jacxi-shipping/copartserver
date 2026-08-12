@@ -35,6 +35,28 @@ import {
 import type { ImportJob } from '@/lib/types'
 import { formatFileSize } from '@/lib/format'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_COPART_API_URL ?? 'http://localhost:8000/api/v1'
+
+function mapImportJob(job: Record<string, unknown>): ImportJob {
+  return {
+    id: String(job.id),
+    filename: String(job.filename ?? ''),
+    fileSize: typeof job.file_size === 'number' ? job.file_size : null,
+    status: String(job.status ?? 'pending'),
+    startedAt: typeof job.started_at === 'string' ? job.started_at : null,
+    completedAt: typeof job.completed_at === 'string' ? job.completed_at : null,
+    totalRows: Number(job.total_rows ?? 0),
+    processedRows: Number(job.processed_rows ?? 0),
+    insertedRows: Number(job.inserted_rows ?? 0),
+    updatedRows: Number(job.updated_rows ?? 0),
+    skippedRows: Number(job.skipped_rows ?? 0),
+    failedRows: Number(job.failed_rows ?? 0),
+    errorMessage: typeof job.error_message === 'string' ? job.error_message : null,
+    createdAt: String(job.created_at ?? ''),
+    updatedAt: String(job.updated_at ?? ''),
+  }
+}
+
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
 const fadeIn = {
@@ -244,10 +266,10 @@ export function ImportTab() {
 
   const fetchImports = useCallback(async () => {
     try {
-      const res = await fetch('/api/import?page=1&pageSize=100')
+      const res = await fetch(`${API_BASE_URL}/import?page=1&page_size=100`)
       if (res.ok) {
         const data = await res.json()
-        setImports(data.data ?? data ?? [])
+        setImports((data.data ?? []).map(mapImportJob))
       }
     } catch {
       // API not available
@@ -313,20 +335,21 @@ export function ImportTab() {
     try {
       const formData = new FormData()
       formData.append('file', csvFile)
-      const res = await fetch('/api/import/preview', {
+      const res = await fetch(`${API_BASE_URL}/import/preview`, {
         method: 'POST',
         body: formData,
       })
       if (res.ok) {
         const data = await res.json()
-        setPreviewData(data.data?.rows ?? data.rows ?? data)
+        const preview = data.data
+        const headers = preview?.detected_columns ?? []
+        const rows = preview?.sample_rows ?? []
+        setPreviewData([headers, ...rows.map((row: Record<string, unknown>) => headers.map((header: string) => String(row[header] ?? '')))])
       }
     } catch {
       setPreviewData(null)
     }
   }
-
-  const CHUNK_SIZE = 5 * 1024 * 1024 // 5 MB per chunk
 
   const handleUpload = useCallback(async () => {
     if (!file) return
@@ -340,72 +363,20 @@ export function ImportTab() {
     setUploadLoaded(0)
     setUploadProgress(0)
 
-    // Generate unique upload ID
-    const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
-    let bytesUploaded = 0
-
     try {
-      // Upload chunks one by one
-      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-        if (cancelledRef.current) {
-          setUploadPhase('idle')
-          return
-        }
-
-        const start = chunkIndex * CHUNK_SIZE
-        const end = Math.min(start + CHUNK_SIZE, file.size)
-        const blob = file.slice(start, end)
-
-        const formData = new FormData()
-        formData.append('chunk', blob, `chunk_${chunkIndex}.part`)
-
-        const res = await fetch(
-          `/api/import/chunk?uploadId=${encodeURIComponent(uploadId)}&chunkIndex=${chunkIndex}&totalChunks=${totalChunks}&filename=${encodeURIComponent(file.name)}`,
-          {
-            method: 'POST',
-            body: formData,
-          }
-        )
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({ error: { message: `Chunk ${chunkIndex + 1} failed (HTTP ${res.status})` } }))
-          setUploadPhase('error')
-          toast.error('Upload failed', { description: errData?.error?.message || `Chunk ${chunkIndex + 1} failed` })
-          return
-        }
-
-        bytesUploaded = end
-        const pct = (bytesUploaded / file.size) * 100
-        setUploadLoaded(bytesUploaded)
-        setUploadProgress(pct)
-
-        // Calculate speed & ETA
-        const elapsed = (Date.now() - uploadStartTimeRef.current) / 1000
-        if (elapsed > 0) {
-          const speed = bytesUploaded / elapsed
-          setUploadSpeed(speed)
-          const remaining = (file.size - bytesUploaded) / speed
-          setUploadETA(remaining)
-        }
-      }
-
-      // All chunks uploaded — tell server to assemble & start background processing
       if (cancelledRef.current) {
         setUploadPhase('idle')
         return
       }
 
-      setUploadPhase('processing')
+      const formData = new FormData()
+      formData.append('file', file)
+      const completeRes = await fetch(`${API_BASE_URL}/import`, { method: 'POST', body: formData })
+      setUploadLoaded(file.size)
       setUploadProgress(100)
+      setUploadPhase('processing')
 
-      const completeRes = await fetch('/api/import/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uploadId }),
-      })
-
-      let completeData: { success?: boolean; data?: { jobId?: string; [key: string]: unknown }; error?: { message?: string } }
+      let completeData: { success?: boolean; job_id?: string; error?: { message?: string } }
       try {
         completeData = await completeRes.json()
       } catch {
@@ -423,7 +394,7 @@ export function ImportTab() {
       }
 
       // Server returned a jobId — poll for completion
-      const jobId = completeData.data?.jobId as string | undefined
+      const jobId = completeData.job_id
       if (!jobId) {
         setUploadPhase('error')
         toast.error('Import failed', { description: 'No job ID returned from server' })
@@ -444,9 +415,9 @@ export function ImportTab() {
           }
 
           try {
-            const jobRes = await fetch(`/api/import/${jobId}`)
+            const jobRes = await fetch(`${API_BASE_URL}/import/${jobId}`)
             const jobData = await jobRes.json()
-            const job = jobData?.data
+            const job = jobData?.data ? mapImportJob(jobData.data) : null
 
             if (!job) {
               setUploadPhase('error')
