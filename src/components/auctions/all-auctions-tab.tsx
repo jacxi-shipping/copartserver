@@ -11,7 +11,7 @@ import { PaginationControls } from '@/components/shared/pagination-controls'
 import { VehicleCard } from '@/components/shared/vehicle-card'
 import { VehicleDetailSheet } from '@/components/shared/vehicle-detail-sheet'
 import type { Auction, PaginationInfo } from '@/lib/types'
-import { formatSaleDate, formatSaleTime } from '@/lib/format'
+import { formatCurrency, formatSaleDate, formatSaleTime } from '@/lib/format'
 
 interface AuctionEvent {
   id: number
@@ -20,6 +20,9 @@ interface AuctionEvent {
   saleDate: string | null
   saleTime: string | null
   timeZone: string | null
+  locationState: string | null
+  estimatedRetailValue: number | null
+  highBid: number | null
   _count: { lots: number }
 }
 
@@ -32,12 +35,14 @@ export function AllAuctionsTab() {
   const [lotPagination, setLotPagination] = useState<PaginationInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [saleDate, setSaleDate] = useState('')
 
   const loadEvents = useCallback(async (page = 1) => {
     setLoading(true)
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: '25' })
       if (query.trim()) params.set('q', query.trim())
+      if (saleDate) params.set('saleDate', saleDate)
       const response = await fetch(`/api/auction-dashboard?${params}`)
       const payload = await response.json()
       if (response.ok && payload.success) {
@@ -47,7 +52,7 @@ export function AllAuctionsTab() {
     } finally {
       setLoading(false)
     }
-  }, [query])
+  }, [query, saleDate])
 
   const loadLots = useCallback(async (auction: AuctionEvent, page = 1) => {
     setLoading(true)
@@ -96,14 +101,14 @@ export function AllAuctionsTab() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><h2 className="text-2xl font-bold tracking-tight">Auction Dashboard</h2><p className="text-sm text-muted-foreground">Select an auction to open its yard and lane-ordered lots.</p></div>
-        <form className="flex w-full gap-2 sm:w-auto" onSubmit={(event) => { event.preventDefault(); void loadEvents(1) }}><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Yard name or number" className="sm:w-64" /><Button type="submit" size="icon" aria-label="Search auctions"><Search className="size-4" /></Button></form>
+        <form className="flex w-full flex-wrap gap-2 sm:w-auto" onSubmit={(event) => { event.preventDefault(); void loadEvents(1) }}><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Yard name or number" className="sm:w-64" /><Input type="date" value={saleDate} onChange={(event) => setSaleDate(event.target.value)} aria-label="Sale date" className="sm:w-40" /><Button type="submit" size="icon" aria-label="Search auctions"><Search className="size-4" /></Button></form>
       </div>
       <Card><CardContent className="p-0">
         {loading ? <div className="space-y-3 p-4">{Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-16 w-full" />)}</div> : events.length === 0 ? <div className="py-16 text-center text-sm text-muted-foreground">No auctions match this dashboard.</div> : (
           <div className="divide-y">{events.map((auction) => <button key={auction.id} className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-muted/50" onClick={() => void loadLots(auction)}>
             <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"><Building2 className="size-5" /></div>
-            <div className="min-w-0 flex-1"><p className="truncate font-semibold">{auction.yardName || `Yard ${auction.yardNumber ?? 'Unknown'}`}</p><p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span><MapPin className="mr-1 inline size-3" />Yard #{auction.yardNumber ?? '—'}</span><span><CalendarClock className="mr-1 inline size-3" />{formatSaleDate(auction.saleDate)} · {formatSaleTime(auction.saleTime)} {auction.timeZone ?? ''}</span></p></div>
-            <Badge variant="secondary" className="shrink-0">{auction._count.lots} lots</Badge><ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1"><p className="truncate font-semibold">{auction.yardName || `Yard ${auction.yardNumber ?? 'Unknown'}`}</p><p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground"><span><MapPin className="mr-1 inline size-3" />Yard #{auction.yardNumber ?? '—'} {auction.locationState ?? ''}</span><span><CalendarClock className="mr-1 inline size-3" />{formatSaleDate(auction.saleDate)} · {formatSaleTime(auction.saleTime)} {auction.timeZone ?? ''}</span></p></div>
+            <div className="hidden text-right text-xs sm:block"><p className="font-medium text-emerald-700 dark:text-emerald-300">{formatCurrency(auction.estimatedRetailValue)}</p><p className="text-muted-foreground">High bids {formatCurrency(auction.highBid)}</p></div><Badge variant="secondary" className="shrink-0">{auction._count.lots} lots</Badge><ChevronRight className="size-4 shrink-0 text-muted-foreground" />
           </button>)}</div>
         )}
       </CardContent></Card>

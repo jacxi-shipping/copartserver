@@ -10,6 +10,7 @@ const POLL_INTERVAL_MS = Math.max(Number.parseInt(process.env.IMPORT_WORKER_POLL
 const RUN_ONCE = process.env.IMPORT_WORKER_ONCE === 'true'
 const UPSERT_BATCH_SIZE = 25
 const JOB_UPDATE_TIMEOUT_MS = 30_000
+const STALE_PROCESSING_MS = 10 * 60 * 1000
 const AUCTION_UPSERT_COLUMNS = [
   'sourceId',
   'yardNumber',
@@ -579,6 +580,7 @@ async function updateImportJob(jobId, data) {
 }
 
 async function claimNextJob() {
+  await recoverStaleJobs()
   const [job] = await db.importJob.findMany({
     where: { status: 'queued' },
     orderBy: { createdAt: 'asc' },
@@ -602,6 +604,20 @@ async function claimNextJob() {
   }
 
   return job
+}
+
+async function recoverStaleJobs() {
+  const staleBefore = new Date(Date.now() - STALE_PROCESSING_MS)
+  const recovered = await db.importJob.updateMany({
+    where: { status: 'processing', updatedAt: { lt: staleBefore } },
+    data: {
+      status: 'queued',
+      startedAt: null,
+      completedAt: null,
+      errorMessage: 'Recovered after a worker stopped reporting progress.',
+    },
+  })
+  if (recovered.count > 0) console.warn(`Re-queued ${recovered.count} stale import job(s)`)
 }
 
 async function main() {

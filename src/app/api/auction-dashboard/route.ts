@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
           id: true, saleKey: true, yardNumber: true, yardName: true,
           saleDate: true, saleTime: true, timeZone: true,
           _count: { select: { lots: true } },
+          lots: { take: 1, select: { locationState: true } },
         },
         orderBy: [{ saleDate: 'asc' }, { saleTime: 'asc' }, { yardNumber: 'asc' }],
         skip,
@@ -30,7 +31,23 @@ export async function GET(request: NextRequest) {
       db.auction.count({ where }),
     ])
 
-    return NextResponse.json({ success: true, pagination: buildPagination(page, pageSize, total), data: auctions })
+    const metrics = await db.lot.groupBy({
+      by: ['auctionId'],
+      where: { auctionId: { in: auctions.map((auction) => auction.id) } },
+      _sum: { estimatedRetailValue: true, highBid: true },
+    })
+    const metricsByAuction = new Map(metrics.map((metric) => [metric.auctionId, metric]))
+    const data = auctions.map(({ lots, ...auction }) => {
+      const metric = metricsByAuction.get(auction.id)
+      return {
+        ...auction,
+        locationState: lots[0]?.locationState ?? null,
+        estimatedRetailValue: metric?._sum.estimatedRetailValue ?? null,
+        highBid: metric?._sum.highBid ?? null,
+      }
+    })
+
+    return NextResponse.json({ success: true, pagination: buildPagination(page, pageSize, total), data })
   } catch (error) {
     console.error('Auction dashboard API error:', error)
     return NextResponse.json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to load auctions' } }, { status: 500 })

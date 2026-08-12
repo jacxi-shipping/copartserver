@@ -81,6 +81,43 @@ function getSaleStatusBadge(status: string | null) {
   return <Badge variant="outline">{status}</Badge>
 }
 
+function LotImageGallery({ vehicle, label, fallback }: { vehicle: Auction; label: string; fallback: string | null }) {
+  const [images, setImages] = useState<string[]>([])
+  const [activeImage, setActiveImage] = useState(0)
+  const [imageFailed, setImageFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setImages([])
+    setActiveImage(0)
+    setImageFailed(false)
+    const country = vehicle.locationCountry?.toLowerCase() === 'canada' ? 'ca' : 'us'
+    fetch(`/api/lots/${vehicle.lotNumber}/images?country=${country}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => { if (!cancelled && payload?.success) setImages(payload.data ?? []) })
+      .catch(() => undefined)
+    return () => { cancelled = true }
+  }, [vehicle.lotNumber, vehicle.locationCountry])
+
+  const source = images[activeImage] ?? fallback
+  if (!source || imageFailed) return null
+
+  return (
+    <>
+      <img src={source} alt={label} onError={() => setImageFailed(true)} className="h-full w-full object-cover" />
+      {images.length > 1 && (
+        <div className="absolute bottom-2 right-2 flex max-w-[80%] gap-1 overflow-x-auto rounded-md bg-black/60 p-1 backdrop-blur-sm">
+          {images.map((image, index) => (
+            <button key={image} type="button" onClick={() => { setActiveImage(index); setImageFailed(false) }} className={`size-9 shrink-0 overflow-hidden rounded border-2 ${index === activeImage ? 'border-white' : 'border-transparent opacity-70 hover:opacity-100'}`} aria-label={`Show image ${index + 1}`}>
+              <img src={image} alt="" className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 function YesNoBadge({ value }: { value: boolean | null | undefined }) {
   if (value == null) return <span className="text-muted-foreground">—</span>
   if (value) {
@@ -700,13 +737,7 @@ export function VehicleDetailSheet({ vehicle, open, onOpenChange }: VehicleDetai
           <div className="px-4 pb-4 space-y-4">
             {/* Image Section */}
             <div className="relative aspect-video rounded-xl overflow-hidden bg-muted shadow-inner">
-              {imageSource ? (
-                <img
-                  src={imageSource}
-                  alt={label}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
+              {imageSource ? <LotImageGallery vehicle={vehicle} label={label} fallback={imageSource} /> : (
                 <div className={`relative flex h-full w-full items-center justify-center bg-gradient-to-br ${gradient}`}>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   <span className="text-6xl font-bold text-white/90 tracking-wider drop-shadow-lg">

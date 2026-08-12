@@ -24,6 +24,7 @@ export interface Auction {
   locationCity: string | null
   locationState: string | null
   locationZip: string | null
+  locationCountry: string | null
   estimatedRetailValue: number | null
   highBid: number | null
   odometer: number | null

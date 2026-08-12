@@ -19,6 +19,7 @@ import {
   BarChart3,
   TrendingUp,
   FileText,
+  RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -573,6 +574,7 @@ export function ImportTab() {
       processing: 'border-teal-300 bg-teal-50 text-teal-700 dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-400',
       completed: 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
       failed: 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400',
+      cancelled: 'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300',
     }
     return (
       <Badge variant="outline" className={map[status] || ''}>
@@ -587,6 +589,17 @@ export function ImportTab() {
     if (ms < 1000) return `${ms}ms`
     if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
     return `${(ms / 60000).toFixed(1)}min`
+  }
+
+  const updateJob = async (jobId: string, action: 'retry' | 'cancel') => {
+    const response = await fetch(`/api/import/${jobId}/${action}`, { method: 'POST' })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok || !payload?.success) {
+      toast.error(`Could not ${action} import`, { description: payload?.error?.message || 'Please try again.' })
+      return
+    }
+    toast.success(action === 'retry' ? 'Import re-queued' : 'Queued import cancelled')
+    void fetchImports()
   }
 
   // ─── Computed stats ────────────────────────────────────────────────────
@@ -936,6 +949,18 @@ export function ImportTab() {
                                 </p>
                               </div>
                             )}
+                            <div className="mt-3 flex gap-2">
+                              {job.status === 'failed' && (
+                                <Button size="sm" variant="outline" onClick={() => void updateJob(job.id, 'retry')}>
+                                  <RotateCcw className="mr-1.5 size-3.5" />Retry import
+                                </Button>
+                              )}
+                              {job.status === 'queued' && (
+                                <Button size="sm" variant="outline" onClick={() => void updateJob(job.id, 'cancel')}>
+                                  <X className="mr-1.5 size-3.5" />Cancel import
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </motion.div>
                       )}
