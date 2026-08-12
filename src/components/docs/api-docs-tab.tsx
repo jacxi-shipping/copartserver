@@ -62,12 +62,13 @@ export function ApiDocsTab() {
           <CardContent>
             <Endpoint method="GET" path="/api/auction-dashboard" description="List sale events. Supports page, pageSize, q, saleDate, and state." />
             <Endpoint method="GET" path="/api/auction-dashboard/{auctionId}" description="Get a parent auction and its lots ordered by lane/grid then lot number." />
+            <Endpoint method="GET" path="/api/auctions/yard/{yardNumber}/lane/{lane}" description="Return every current/future sale event at an exact yard and lane, each with all full lot records. Add saleDate=YYYY-MM-DD to select one sale or includePast=true for history." />
           </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Search className="size-4 text-sky-500" />Lot Search</CardTitle><CardDescription>Search individual lots using database-side filters and pagination.</CardDescription></CardHeader>
           <CardContent>
-            <Endpoint method="GET" path="/api/search?q=toyota&page=1&pageSize=25" description="Search by make, model, VIN, location, and sale fields." />
+            <Endpoint method="GET" path="/api/search?q=4runner&all=true" description="Search all current/future matching lots and return full JSON records. Results are capped at 5,000; pagination metadata reports truncation." />
             <Endpoint method="POST" path="/api/search" description="Use advanced filters such as makes, states, yearMin/yearMax, priceMin/priceMax, and odometer ranges.">
               <CodeBlock>{`{
   "query": "4runner",

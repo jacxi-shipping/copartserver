@@ -4,12 +4,15 @@ import { Prisma } from '@prisma/client'
 import { getTodayStr, parsePagination, buildPagination, buildOrderBy } from '@/lib/query-builder'
 import { buildTextSearchWhere, buildUpcomingSaleDateWhere } from '@/lib/search-helpers'
 
+const MAX_ALL_RESULTS = 5_000
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
     const q = searchParams.get('q')
     const upcomingOnly = searchParams.get('upcomingOnly') !== 'false'
     const includeUnscheduled = searchParams.get('includeUnscheduled') === 'true'
+    const allResults = searchParams.get('all') === 'true'
 
     const { page, pageSize, skip } = parsePagination(searchParams)
     const todayStr = getTodayStr()
@@ -28,20 +31,17 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get('sort') || 'saleDate_asc'
     const orderBy = buildOrderBy(sort)
 
-    const [auctions, total] = await Promise.all([
-      db.lot.findMany({
-        where,
-        orderBy,
-        skip,
-        take: pageSize,
-      }),
-      db.lot.count({ where }),
-    ])
+    const lotsPromise = allResults
+      ? db.lot.findMany({ where, orderBy, take: MAX_ALL_RESULTS })
+      : db.lot.findMany({ where, orderBy, skip, take: pageSize })
+    const [lots, total] = await Promise.all([lotsPromise, db.lot.count({ where })])
 
     return NextResponse.json({
       success: true,
-      pagination: buildPagination(page, pageSize, total),
-      data: auctions,
+      pagination: allResults
+        ? { page: 1, pageSize: lots.length, total, totalPages: 1, hasNext: total > lots.length, hasPrevious: false, truncated: total > lots.length }
+        : buildPagination(page, pageSize, total),
+      data: lots,
     })
   } catch (error) {
     console.error('Search GET API error:', error)

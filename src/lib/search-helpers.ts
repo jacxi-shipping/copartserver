@@ -24,7 +24,7 @@ export const SEARCHABLE_FIELDS = [
 export function buildTextSearchWhere(query: string) {
   return {
     OR: SEARCHABLE_FIELDS.map((field) => ({
-      [field]: { contains: query },
+      [field]: { contains: query, mode: 'insensitive' },
     })),
   }
 }
