@@ -1,42 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import path from 'path'
 
 import { summarizeMarketOverview } from '../../src/lib/analytics-helpers.ts'
-import {
-  getImportChunkMetaPath,
-  getImportChunkPath,
-  getImportPreviewPath,
-  getImportStoragePaths,
-  getImportUploadPath,
-  isCsvFilename,
-  isValidUploadId,
-} from '../../src/lib/import-storage.ts'
+import { isCsvFilename } from '../../src/lib/import-validation.ts'
 import { getDbField, getMissingRequiredFields } from '../../src/lib/import-schema.ts'
 import { buildTextSearchWhere, buildUpcomingSaleDateWhere } from '../../src/lib/search-helpers.ts'
 
-test('import storage paths default to workspace data directory', () => {
-  const paths = getImportStoragePaths('')
-
-  assert.equal(paths.dataDir, path.join(process.cwd(), 'data'))
-  assert.equal(paths.chunksDir, path.join(process.cwd(), 'data', 'chunks'))
-  assert.equal(getImportUploadPath('job_1', ''), path.join(process.cwd(), 'data', 'job_1_upload.csv'))
-  assert.equal(getImportPreviewPath('preview.csv', ''), path.join(process.cwd(), 'data', 'preview.csv'))
-})
-
-test('import storage paths honor explicit base directory', () => {
-  const paths = getImportStoragePaths('D:/custom-data')
-
-  assert.equal(paths.dataDir, path.resolve('D:/custom-data'))
-  assert.equal(getImportChunkPath('upload_1', 2, 'D:/custom-data'), path.join(path.resolve('D:/custom-data'), 'chunks', 'upload_1_2.part'))
-  assert.equal(getImportChunkMetaPath('upload_1', 'D:/custom-data'), path.join(path.resolve('D:/custom-data'), 'chunks', 'upload_1.meta.json'))
-})
-
-test('upload ids and filenames are validated conservatively', () => {
-  assert.equal(isValidUploadId('upload_123-abc'), true)
-  assert.equal(isValidUploadId('../escape'), false)
-  assert.equal(isValidUploadId('bad space'), false)
-
+test('CSV filenames are validated conservatively', () => {
   assert.equal(isCsvFilename('lots.csv'), true)
   assert.equal(isCsvFilename('LOTS.CSV'), true)
   assert.equal(isCsvFilename('lots.txt'), false)

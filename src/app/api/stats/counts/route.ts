@@ -1,24 +1,14 @@
 import { NextResponse } from 'next/server'
 
-const COPART_API_URL = process.env.COPART_API_URL ?? 'http://127.0.0.1:8000/api/v1'
+import { getSidebarCounts } from '@/lib/stats'
 
 export async function GET() {
   try {
-    const [statsResponse, importsResponse] = await Promise.all([
-      fetch(`${COPART_API_URL}/stats`, { cache: 'no-store' }),
-      fetch(`${COPART_API_URL}/import?page=1&page_size=1`, { cache: 'no-store' }),
-    ])
-    if (!statsResponse.ok || !importsResponse.ok) throw new Error('FastAPI counts request failed')
-    const [{ data: stats }, { pagination }] = await Promise.all([statsResponse.json(), importsResponse.json()])
+    const counts = await getSidebarCounts()
 
     return NextResponse.json({
       success: true,
-      data: {
-        total: stats.total_auctions,
-        upcoming: stats.upcoming_auctions,
-        today: stats.today_auctions,
-        imports: pagination.total,
-      },
+      data: counts,
     })
   } catch (error) {
     console.error('Failed to fetch counts:', error)

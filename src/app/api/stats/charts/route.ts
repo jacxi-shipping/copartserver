@@ -11,23 +11,23 @@ async function safeGroupBy(
   } = {}
 ) {
   return db.auction.groupBy({
-    by: [field],
-    _count: { [field]: true },
-    orderBy: options.orderBy ?? { _count: { [field]: 'desc' } },
+    by: [field] as Prisma.AuctionScalarFieldEnum[],
+    _count: { [field]: true } as Record<string, true>,
+    orderBy: (options.orderBy ?? { _count: { [field]: 'desc' } }) as Prisma.AuctionOrderByWithAggregationInput,
     take: options.take,
     where: options.where ?? undefined,
-  })
+  } as any)
 }
 
 function formatGroupResult(
-  results: { _count: Record<string, number>; [key: string]: unknown }[],
+  results: Array<{ _count?: Record<string, number | undefined> | true; [key: string]: unknown }>,
   field: string
 ): { name: string; count: number }[] {
   return results
     .filter((r) => r[field] !== null && r[field] !== '')
     .map((r) => ({
       name: String(r[field]),
-      count: r._count[field] ?? 0,
+      count: typeof r._count === 'object' && r._count !== null ? r._count[field] ?? 0 : 0,
     }))
 }
 

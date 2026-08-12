@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { Clock, X, Loader2, Eye, Gauge } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -34,7 +34,7 @@ function getDamageBadgeClasses(damage: string | null | undefined): string {
 /*  Animation variants                                                  */
 /* ------------------------------------------------------------------ */
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -42,9 +42,9 @@ const containerVariants = {
   },
 }
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' as const } },
 }
 /* ------------------------------------------------------------------ */
 /*  Mini Vehicle Card (enhanced)                                         */
@@ -70,7 +70,7 @@ function MiniVehicleCard({
       className="shrink-0"
     >
       <Card
-n        className="group w-44 cursor-pointer overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/5"
+        className="group w-44 cursor-pointer overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/5"
         onClick={onClick}
       >
         {/* Gradient placeholder with initials */}

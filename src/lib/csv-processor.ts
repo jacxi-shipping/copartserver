@@ -1,4 +1,5 @@
 import Papa from 'papaparse'
+import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
 import fs from 'fs'
 import path from 'path'
@@ -182,6 +183,8 @@ async function flushBatch(
     await db.$transaction(async (tx) => {
       for (const mappedRow of rows) {
         const lotNumber = mappedRow.lotNumber as number
+        const createData = mappedRow as Prisma.AuctionUncheckedCreateInput
+        const updateData = mappedRow as Prisma.AuctionUncheckedUpdateInput
 
         const existing = await tx.auction.findUnique({
           where: { lotNumber },
@@ -197,13 +200,13 @@ async function flushBatch(
             !incomingTime
 
           if (shouldUpdate) {
-            await tx.auction.update({ where: { lotNumber }, data: mappedRow })
+              await tx.auction.update({ where: { lotNumber }, data: updateData })
             result.updatedRows++
           } else {
             result.skippedRows++
           }
         } else {
-          await tx.auction.create({ data: mappedRow })
+            await tx.auction.create({ data: createData })
           result.insertedRows++
         }
         result.processedRows++
@@ -216,6 +219,8 @@ async function flushBatch(
     for (const mappedRow of rows) {
       try {
         const lotNumber = mappedRow.lotNumber as number
+        const createData = mappedRow as Prisma.AuctionUncheckedCreateInput
+        const updateData = mappedRow as Prisma.AuctionUncheckedUpdateInput
         const existing = await db.auction.findUnique({
           where: { lotNumber },
           select: { lotNumber: true, lastUpdatedTime: true },
@@ -227,13 +232,13 @@ async function flushBatch(
             (!existing.lastUpdatedTime && incomingTime) ||
             !incomingTime
           if (shouldUpdate) {
-            await db.auction.update({ where: { lotNumber }, data: mappedRow })
+            await db.auction.update({ where: { lotNumber }, data: updateData })
             result.updatedRows++
           } else {
             result.skippedRows++
           }
         } else {
-          await db.auction.create({ data: mappedRow })
+          await db.auction.create({ data: createData })
           result.insertedRows++
         }
         result.processedRows++

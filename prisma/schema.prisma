@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Auction {
-  id                   Int      @id @default(autoincrement())
+  id                   Int       @id @default(autoincrement())
   sourceId             String?
   yardNumber           Int?
   yardName             String?
@@ -17,7 +17,7 @@ model Auction {
   saleTime             String?
   timeZone             String?
   itemNumber           String?
-  lotNumber            Int      @unique
+  lotNumber            Int       @unique
   vehicleType          String?
   year                 Int?
   make                 String?
@@ -73,8 +73,8 @@ model Auction {
   sourceImportJobId    String?
   rawData              String?
   extraData            String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([vin])
   @@index([saleDate])
@@ -91,24 +91,27 @@ model Auction {
 }
 
 model ImportJob {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   filename      String
   fileSize      Int?
-  status        String   @default("pending")
+  storageKey    String?
+  storageUrl    String?
+  status        String    @default("pending")
   startedAt     DateTime?
   completedAt   DateTime?
-  totalRows     Int      @default(0)
-  processedRows Int      @default(0)
-  insertedRows  Int      @default(0)
-  updatedRows   Int      @default(0)
-  skippedRows   Int      @default(0)
-  failedRows    Int      @default(0)
+  totalRows     Int       @default(0)
+  processedRows Int       @default(0)
+  insertedRows  Int       @default(0)
+  updatedRows   Int       @default(0)
+  skippedRows   Int       @default(0)
+  failedRows    Int       @default(0)
   errorMessage  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([status])
   @@index([createdAt])
+  @@index([storageKey])
 }
 
 model LotNote {
@@ -128,7 +131,7 @@ model LotTag {
   color     String   @default("emerald")
   createdAt DateTime @default(now())
 
+  @@unique([lotId, tag])
   @@index([lotId])
   @@index([tag])
-  @@unique([lotId, tag])
 }

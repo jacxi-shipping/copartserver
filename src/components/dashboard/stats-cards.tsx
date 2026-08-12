@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { Database, CalendarClock, Calendar, Car, TrendingUp, TrendingDown, Info, RefreshCw, MapPin, Warehouse, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -29,7 +29,7 @@ const fadeIn = {
 
 interface StatCardConfig {
   label: string
-  valueKey: keyof Stats
+  valueKey: 'totalAuctions' | 'upcomingAuctions' | 'todayAuctions' | 'uniqueMakes'
   icon: typeof Database
   gradient: string
   iconBg: string
@@ -258,7 +258,7 @@ function PlatformInfoCard({ stats, loading, onRefresh, lastRefreshRef, isSpinnin
 /*  Viewport-triggered section reveal wrapper                          */
 /* ------------------------------------------------------------------ */
 
-const sectionReveal = {
+const sectionReveal: Variants = {
   hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
     opacity: 1,
@@ -266,7 +266,7 @@ const sectionReveal = {
     transition: {
       delay: i * 0.08,
       duration: 0.5,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1] as const,
     },
   }),
 }

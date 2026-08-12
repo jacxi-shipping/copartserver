@@ -15,7 +15,10 @@ export async function GET() {
         year: true,
       },
       where: {
-        make: { not: null, not: '' },
+        AND: [
+          { make: { not: null } },
+          { make: { not: '' } },
+        ],
       },
       orderBy: { _count: { make: 'desc' } },
       take: 15,

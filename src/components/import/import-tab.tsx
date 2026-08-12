@@ -1,5 +1,6 @@
 'use client'
 
+import { upload } from '@vercel/blob/client'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -35,25 +36,23 @@ import {
 import type { ImportJob } from '@/lib/types'
 import { formatFileSize } from '@/lib/format'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_COPART_API_URL ?? 'http://localhost:8000/api/v1'
-
 function mapImportJob(job: Record<string, unknown>): ImportJob {
   return {
     id: String(job.id),
     filename: String(job.filename ?? ''),
-    fileSize: typeof job.file_size === 'number' ? job.file_size : null,
+    fileSize: typeof job.fileSize === 'number' ? job.fileSize : typeof job.file_size === 'number' ? job.file_size : null,
     status: String(job.status ?? 'pending'),
-    startedAt: typeof job.started_at === 'string' ? job.started_at : null,
-    completedAt: typeof job.completed_at === 'string' ? job.completed_at : null,
-    totalRows: Number(job.total_rows ?? 0),
-    processedRows: Number(job.processed_rows ?? 0),
-    insertedRows: Number(job.inserted_rows ?? 0),
-    updatedRows: Number(job.updated_rows ?? 0),
-    skippedRows: Number(job.skipped_rows ?? 0),
-    failedRows: Number(job.failed_rows ?? 0),
-    errorMessage: typeof job.error_message === 'string' ? job.error_message : null,
-    createdAt: String(job.created_at ?? ''),
-    updatedAt: String(job.updated_at ?? ''),
+    startedAt: typeof job.startedAt === 'string' ? job.startedAt : typeof job.started_at === 'string' ? job.started_at : null,
+    completedAt: typeof job.completedAt === 'string' ? job.completedAt : typeof job.completed_at === 'string' ? job.completed_at : null,
+    totalRows: Number(job.totalRows ?? job.total_rows ?? 0),
+    processedRows: Number(job.processedRows ?? job.processed_rows ?? 0),
+    insertedRows: Number(job.insertedRows ?? job.inserted_rows ?? 0),
+    updatedRows: Number(job.updatedRows ?? job.updated_rows ?? 0),
+    skippedRows: Number(job.skippedRows ?? job.skipped_rows ?? 0),
+    failedRows: Number(job.failedRows ?? job.failed_rows ?? 0),
+    errorMessage: typeof job.errorMessage === 'string' ? job.errorMessage : typeof job.error_message === 'string' ? job.error_message : null,
+    createdAt: String(job.createdAt ?? job.created_at ?? ''),
+    updatedAt: String(job.updatedAt ?? job.updated_at ?? ''),
   }
 }
 
@@ -266,7 +265,7 @@ export function ImportTab() {
 
   const fetchImports = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/import?page=1&page_size=100`)
+      const res = await fetch('/api/import?page=1&pageSize=100')
       if (res.ok) {
         const data = await res.json()
         setImports((data.data ?? []).map(mapImportJob))
@@ -279,7 +278,11 @@ export function ImportTab() {
   }, [])
 
   useEffect(() => {
-    fetchImports()
+    const timer = setTimeout(() => {
+      void fetchImports()
+    }, 0)
+
+    return () => clearTimeout(timer)
   }, [fetchImports])
 
   // Auto-dismiss upload success overlay
@@ -335,15 +338,15 @@ export function ImportTab() {
     try {
       const formData = new FormData()
       formData.append('file', csvFile)
-      const res = await fetch(`${API_BASE_URL}/import/preview`, {
+      const res = await fetch('/api/import/preview', {
         method: 'POST',
         body: formData,
       })
       if (res.ok) {
         const data = await res.json()
         const preview = data.data
-        const headers = preview?.detected_columns ?? []
-        const rows = preview?.sample_rows ?? []
+        const headers = preview?.detectedColumns ?? []
+        const rows = preview?.sampleRows ?? []
         setPreviewData([headers, ...rows.map((row: Record<string, unknown>) => headers.map((header: string) => String(row[header] ?? '')))])
       }
     } catch {
@@ -369,14 +372,37 @@ export function ImportTab() {
         return
       }
 
-      const formData = new FormData()
-      formData.append('file', file)
-      const completeRes = await fetch(`${API_BASE_URL}/import`, { method: 'POST', body: formData })
+      const uploadedBlob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/import/upload',
+        onUploadProgress: ({ loaded, total, percentage }) => {
+          if (cancelledRef.current) return
+          const elapsedSeconds = Math.max((Date.now() - uploadStartTimeRef.current) / 1000, 1)
+          const bytesPerSecond = loaded / elapsedSeconds
+          setUploadLoaded(loaded)
+          setUploadTotal(total)
+          setUploadProgress(percentage)
+          setUploadSpeed(bytesPerSecond)
+          setUploadETA(total > loaded && bytesPerSecond > 0 ? (total - loaded) / bytesPerSecond : 0)
+        },
+      })
+
+      const completeRes = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          fileSize: file.size,
+          storageUrl: uploadedBlob.url,
+          storageKey: uploadedBlob.pathname,
+        }),
+      })
+
       setUploadLoaded(file.size)
       setUploadProgress(100)
       setUploadPhase('processing')
 
-      let completeData: { success?: boolean; job_id?: string; error?: { message?: string } }
+      let completeData: { success?: boolean; data?: { jobId?: string; status?: string }; error?: { message?: string } }
       try {
         completeData = await completeRes.json()
       } catch {
@@ -394,7 +420,7 @@ export function ImportTab() {
       }
 
       // Server returned a jobId — poll for completion
-      const jobId = completeData.job_id
+      const jobId = completeData.data?.jobId
       if (!jobId) {
         setUploadPhase('error')
         toast.error('Import failed', { description: 'No job ID returned from server' })
@@ -415,7 +441,7 @@ export function ImportTab() {
           }
 
           try {
-            const jobRes = await fetch(`${API_BASE_URL}/import/${jobId}`)
+            const jobRes = await fetch(`/api/import/${jobId}`)
             const jobData = await jobRes.json()
             const job = jobData?.data ? mapImportJob(jobData.data) : null
 
@@ -452,6 +478,10 @@ export function ImportTab() {
               toast.error('Import failed', { description: job.errorMessage || 'Processing error' })
               resolvePoll()
               return
+            }
+
+            if (job.status === 'queued') {
+              setUploadPhase('processing')
             }
 
             // Still processing — check timeout

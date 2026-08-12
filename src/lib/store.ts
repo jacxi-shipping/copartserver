@@ -31,7 +31,7 @@ export type ActivityType =
   | 'bulk_watchlist'
   | 'bulk_export'
 
-type ActivityIcon = 'search' | 'heart' | 'git-compare' | 'download' | 'upload' | 'eye' | 'filter' | 'check-square' | 'list' | 'clock'
+export type ActivityIcon = 'search' | 'heart' | 'git-compare' | 'download' | 'upload' | 'eye' | 'filter' | 'check-square' | 'list' | 'clock'
 
 export interface ActivityItem {
   id: string

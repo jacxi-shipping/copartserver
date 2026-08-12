@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import {
   BarChart3, DollarSign, Gavel, Wrench, TrendingUp,
   MapPin, Building2, Warehouse, Car,
@@ -66,11 +66,11 @@ interface LocationAnalysis {
 
 // ─── Animation Variants ────────────────────────────────────────────────────
 
-const sectionReveal = {
+const sectionReveal: Variants = {
   hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+    transition: { delay: i * 0.08, duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
   }),
 }
 
@@ -100,7 +100,7 @@ function GradientSeparator() {
 
 // ─── Stagger Animation for Bars ─────────────────────────────────────────────
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -108,14 +108,14 @@ const staggerContainer = {
   },
 }
 
-const staggerItem = {
+const staggerItem: Variants = {
   hidden: { opacity: 0, x: -8 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const } },
 }
 
-const staggerItemUp = {
+const staggerItemUp: Variants = {
   hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const } },
 }
 
 // ─── Warm color palette for damage chart ────────────────────────────────────

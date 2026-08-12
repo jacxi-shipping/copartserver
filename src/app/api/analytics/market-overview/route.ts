@@ -22,7 +22,10 @@ export async function GET() {
         orderBy: { _count: { damageDescription: 'desc' } },
         take: 10,
         where: {
-          damageDescription: { not: null, not: '' },
+          AND: [
+            { damageDescription: { not: null } },
+            { damageDescription: { not: '' } },
+          ],
         },
       }),
     ])

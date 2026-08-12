@@ -44,6 +44,7 @@ const iconMap: Record<ActivityIcon, typeof Bell> = {
   filter: Filter,
   'check-square': CheckSquare,
   list: List,
+  clock: Clock,
 }
 
 const iconColorMap: Record<ActivityIcon, string> = {
@@ -56,6 +57,7 @@ const iconColorMap: Record<ActivityIcon, string> = {
   filter: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/50',
   'check-square': 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50',
   list: 'text-muted-foreground bg-muted',
+  clock: 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/50',
 }
 
 // ─── Time formatter ────────────────────────────────────────────────────────────

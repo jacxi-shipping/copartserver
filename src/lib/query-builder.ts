@@ -105,7 +105,7 @@ export function buildAuctionFilters(searchParams: URLSearchParams): {
   if (isToday) {
     and.push({ saleDate: todayStr })
   } else if (saleDateFrom || saleDateTo) {
-    const dateFilter: Prisma.AuctionWhereInput = {}
+    const dateFilter: Prisma.StringNullableFilter<'Auction'> = {}
     if (saleDateFrom) dateFilter.gte = saleDateFrom
     if (saleDateTo) dateFilter.lte = saleDateTo
     and.push({ saleDate: dateFilter })
@@ -186,7 +186,7 @@ export function buildAuctionFilters(searchParams: URLSearchParams): {
   for (const { min, max, dbField, type } of numericRangeFields) {
     const minVal = searchParams.get(min)
     const maxVal = searchParams.get(max)
-    const condition: Prisma.AuctionWhereInput = {}
+    const condition: { gte?: number; lte?: number } = {}
     if (minVal) {
       const parsed = type === 'int' ? parseInt(minVal, 10) : parseFloat(minVal)
       if (!isNaN(parsed)) condition.gte = parsed
@@ -196,7 +196,7 @@ export function buildAuctionFilters(searchParams: URLSearchParams): {
       if (!isNaN(parsed)) condition.lte = parsed
     }
     if (minVal || maxVal) {
-      and.push({ [dbField]: condition })
+      and.push({ [dbField]: condition } as Prisma.AuctionWhereInput)
     }
   }
 

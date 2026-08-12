@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     // Year range filter
     if (yearMin || yearMax) {
-      const yearFilter: Prisma.AuctionWhereInput = {}
+      const yearFilter: Prisma.IntNullableFilter<'Auction'> = {}
       if (yearMin) {
         const parsed = parseInt(String(yearMin), 10)
         if (!isNaN(parsed)) yearFilter.gte = parsed
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // Price range filter
     if (priceMin != null || priceMax != null) {
-      const priceFilter: Prisma.AuctionWhereInput = {}
+      const priceFilter: Prisma.FloatNullableFilter<'Auction'> = {}
       if (priceMin != null) {
         const parsed = parseFloat(String(priceMin))
         if (!isNaN(parsed)) priceFilter.gte = parsed
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     // Odometer range filter
     if (odometerMin != null || odometerMax != null) {
-      const odometerFilter: Prisma.AuctionWhereInput = {}
+      const odometerFilter: Prisma.FloatNullableFilter<'Auction'> = {}
       if (odometerMin != null) {
         const parsed = parseFloat(String(odometerMin))
         if (!isNaN(parsed)) odometerFilter.gte = parsed

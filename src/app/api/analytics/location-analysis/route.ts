@@ -12,7 +12,10 @@ export async function GET() {
         highBid: true,
       },
       where: {
-        locationState: { not: null, not: '' },
+        AND: [
+          { locationState: { not: null } },
+          { locationState: { not: '' } },
+        ],
       },
       orderBy: { _count: { locationState: 'desc' } },
       take: 15,
@@ -28,7 +31,10 @@ export async function GET() {
             _count: { make: true },
             where: {
               locationState: g.locationState as string,
-              make: { not: null, not: '' },
+              AND: [
+                { make: { not: null } },
+                { make: { not: '' } },
+              ],
             },
             orderBy: { _count: { make: 'desc' } },
             take: 1,
@@ -54,7 +60,10 @@ export async function GET() {
       by: ['locationCity'],
       _count: { locationCity: true },
       where: {
-        locationCity: { not: null, not: '' },
+        AND: [
+          { locationCity: { not: null } },
+          { locationCity: { not: '' } },
+        ],
       },
       orderBy: { _count: { locationCity: 'desc' } },
       take: 10,
@@ -72,7 +81,10 @@ export async function GET() {
       by: ['yardName'],
       _count: { yardName: true },
       where: {
-        yardName: { not: null, not: '' },
+        AND: [
+          { yardName: { not: null } },
+          { yardName: { not: '' } },
+        ],
       },
       orderBy: { _count: { yardName: 'desc' } },
       take: 15,

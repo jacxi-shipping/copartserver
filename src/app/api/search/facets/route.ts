@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client'
 import { getTodayStr } from '@/lib/query-builder'
 import { buildTextSearchWhere } from '@/lib/search-helpers'
 
+type FacetItem = { value: string | number | null; count: number }
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If there's a search query, add it to the filter
-    const where = q
+    const where: Prisma.AuctionWhereInput = q
       ? {
           AND: [
             baseFilter,
@@ -67,12 +69,12 @@ export async function GET(request: NextRequest) {
         _count: { locationState: true },
         orderBy: { _count: { locationState: 'desc' } },
       }),
-      db.auction.groupBy({
+      (db.auction.groupBy as any)({
         where: { ...where, year: { not: null } },
         by: ['year'],
         _count: { year: true },
         orderBy: { year: 'desc' } as any,
-      }),
+      }) as unknown as Promise<Array<{ year: number | null; _count: { year: number } }>>,
       db.auction.groupBy({
         where: { ...where, damageDescription: { not: null } },
         by: ['damageDescription'],
@@ -123,19 +125,30 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
+    const makes = makesResult as Array<{ make: string | null; _count: { make: number } }>
+    const models = modelsResult as Array<{ modelGroup: string | null; _count: { modelGroup: number } }>
+    const states = statesResult as Array<{ locationState: string | null; _count: { locationState: number } }>
+    const years = yearsResult as Array<{ year: number | null; _count: { year: number } }>
+    const damage = damageResult as Array<{ damageDescription: string | null; _count: { damageDescription: number } }>
+    const titleTypes = titleTypesResult as Array<{ saleTitleType: string | null; _count: { saleTitleType: number } }>
+    const fuelTypes = fuelTypesResult as Array<{ fuelType: string | null; _count: { fuelType: number } }>
+    const transmissions = transmissionsResult as Array<{ transmission: string | null; _count: { transmission: number } }>
+    const drives = drivesResult as Array<{ drive: string | null; _count: { drive: number } }>
+    const bodyStyles = bodyStylesResult as Array<{ bodyStyle: string | null; _count: { bodyStyle: number } }>
+
     return NextResponse.json({
       success: true,
       data: {
-        makes: makesResult.map(r => ({ value: r.make, count: r._count.make })),
-        models: modelsResult.map(r => ({ value: r.modelGroup, count: r._count.modelGroup })),
-        states: statesResult.map(r => ({ value: r.locationState, count: r._count.locationState })),
-        years: yearsResult.map(r => ({ value: r.year, count: r._count.year })),
-        damage: damageResult.map(r => ({ value: r.damageDescription, count: r._count.damageDescription })),
-        titleTypes: titleTypesResult.map(r => ({ value: r.saleTitleType, count: r._count.saleTitleType })),
-        fuelTypes: fuelTypesResult.map(r => ({ value: r.fuelType, count: r._count.fuelType })),
-        transmissions: transmissionsResult.map(r => ({ value: r.transmission, count: r._count.transmission })),
-        drives: drivesResult.map(r => ({ value: r.drive, count: r._count.drive })),
-        bodyStyles: bodyStylesResult.map(r => ({ value: r.bodyStyle, count: r._count.bodyStyle })),
+        makes: makes.map((r): FacetItem => ({ value: r.make, count: r._count.make })),
+        models: models.map((r): FacetItem => ({ value: r.modelGroup, count: r._count.modelGroup })),
+        states: states.map((r): FacetItem => ({ value: r.locationState, count: r._count.locationState })),
+        years: years.map((r): FacetItem => ({ value: r.year, count: r._count.year })),
+        damage: damage.map((r): FacetItem => ({ value: r.damageDescription, count: r._count.damageDescription })),
+        titleTypes: titleTypes.map((r): FacetItem => ({ value: r.saleTitleType, count: r._count.saleTitleType })),
+        fuelTypes: fuelTypes.map((r): FacetItem => ({ value: r.fuelType, count: r._count.fuelType })),
+        transmissions: transmissions.map((r): FacetItem => ({ value: r.transmission, count: r._count.transmission })),
+        drives: drives.map((r): FacetItem => ({ value: r.drive, count: r._count.drive })),
+        bodyStyles: bodyStyles.map((r): FacetItem => ({ value: r.bodyStyle, count: r._count.bodyStyle })),
         yearRange: {
           min: yearRangeResult._min.year,
           max: yearRangeResult._max.year,
