@@ -40,9 +40,16 @@ function parseBoolean(value: string | undefined | null): boolean | null {
   return null
 }
 
-function stripMarkdownLinks(value: string | undefined | null): string | null {
-  if (!value) return null
-  return value.replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$2')
+function normalizeImageUrl(value: string | undefined | null, lotNumber: number | null): string | null {
+  const source = value?.replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$2').trim()
+  if (!source) return lotNumber ? `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=us&brand=cprt` : null
+
+  const absoluteUrl = /^https?:\/\//i.test(source) ? source : `https://${source}`
+  if (/inventoryv2\.copart\.io\/v1\/lotImages/i.test(absoluteUrl)) return absoluteUrl
+  if (lotNumber && /(?:^|\.)copart\.com\//i.test(absoluteUrl)) {
+    return `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=us&brand=cprt`
+  }
+  return absoluteUrl
 }
 
 function parseNumeric(value: string | undefined | null): number | null {
@@ -126,10 +133,6 @@ function mapRow(rawRow: Record<string, string>, headerMap: Map<string, string>, 
       case 'wholesale':
         mappedRow[dbField] = parseBoolean(value)
         break
-      case 'imageUrl':
-      case 'imageThumbnail':
-        mappedRow[dbField] = stripMarkdownLinks(value)
-        break
       case 'lotNumber':
       case 'year':
       case 'yardNumber':
@@ -158,6 +161,9 @@ function mapRow(rawRow: Record<string, string>, headerMap: Map<string, string>, 
 
   const lotNumber = mappedRow.lotNumber as number | undefined
   if (!lotNumber) return null
+
+  mappedRow.imageUrl = normalizeImageUrl(rawRow[headerMap.get('image_url') ?? ''], lotNumber)
+  mappedRow.imageThumbnail = normalizeImageUrl(rawRow[headerMap.get('image_thumbnail') ?? ''], lotNumber)
 
   mappedRow.searchText = buildSearchText(mappedRow)
   mappedRow.sourceFile = path.basename(filePath)
@@ -189,6 +195,31 @@ function auctionData(mappedRow: Record<string, unknown>): Prisma.AuctionUnchecke
 
 const BATCH_SIZE = 100
 
+function deduplicateRows(rows: Record<string, unknown>[]): { rows: Record<string, unknown>[]; skipped: number } {
+  const rowsByLot = new Map<number, Record<string, unknown>>()
+  let skipped = 0
+
+  for (const row of rows) {
+    const lotNumber = row.lotNumber as number
+    const existing = rowsByLot.get(lotNumber)
+    if (!existing) {
+      rowsByLot.set(lotNumber, row)
+      continue
+    }
+
+    const existingUpdated = existing.lastUpdatedTime as Date | null | undefined
+    const incomingUpdated = row.lastUpdatedTime as Date | null | undefined
+    if (incomingUpdated && (!existingUpdated || incomingUpdated > existingUpdated)) rowsByLot.set(lotNumber, row)
+    skipped++
+  }
+
+  return { rows: [...rowsByLot.values()], skipped }
+}
+
+function shouldUpdateLot(existingUpdated: Date | null, incomingUpdated: Date | null | undefined): boolean {
+  return Boolean(incomingUpdated && (!existingUpdated || incomingUpdated > existingUpdated))
+}
+
 /**
  * Write a batch of mapped rows to the database using a transaction.
  */
@@ -198,6 +229,9 @@ async function flushBatch(
   onProgress?: (result: Partial<ProcessResult>) => void
 ): Promise<void> {
   if (rows.length === 0) return
+  const deduplicated = deduplicateRows(rows)
+  rows = deduplicated.rows
+  result.skippedRows += deduplicated.skipped
 
   try {
     await db.$transaction(async (tx) => {
@@ -220,10 +254,7 @@ async function flushBatch(
         const incomingTime = mappedRow.lastUpdatedTime as Date | null | undefined
 
         if (existing) {
-          const shouldUpdate =
-            (incomingTime && existing.lastUpdatedTime && incomingTime > existing.lastUpdatedTime) ||
-            (!existing.lastUpdatedTime && incomingTime) ||
-            !incomingTime
+          const shouldUpdate = shouldUpdateLot(existing.lastUpdatedTime, incomingTime)
 
           if (shouldUpdate) {
               await tx.lot.update({ where: { lotNumber }, data: updateData })
@@ -259,10 +290,7 @@ async function flushBatch(
         })
         const incomingTime = mappedRow.lastUpdatedTime as Date | null | undefined
         if (existing) {
-          const shouldUpdate =
-            (incomingTime && existing.lastUpdatedTime && incomingTime > existing.lastUpdatedTime) ||
-            (!existing.lastUpdatedTime && incomingTime) ||
-            !incomingTime
+          const shouldUpdate = shouldUpdateLot(existing.lastUpdatedTime, incomingTime)
           if (shouldUpdate) {
               await db.lot.update({ where: { lotNumber }, data: updateData })
             result.updatedRows++

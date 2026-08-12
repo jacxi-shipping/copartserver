@@ -121,9 +121,16 @@ function parseBoolean(value) {
   return null
 }
 
-function stripMarkdownLinks(value) {
-  if (!value) return null
-  return value.replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$2')
+function normalizeImageUrl(value, lotNumber) {
+  const source = value?.replace(/\[([^\]]*)\]\(([^)]+)\)/g, '$2').trim()
+  if (!source) return lotNumber ? `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=us&brand=cprt` : null
+
+  const absoluteUrl = /^https?:\/\//i.test(source) ? source : `https://${source}`
+  if (/inventoryv2\.copart\.io\/v1\/lotImages/i.test(absoluteUrl)) return absoluteUrl
+  if (lotNumber && /(?:^|\.)copart\.com\//i.test(absoluteUrl)) {
+    return `https://inventoryv2.copart.io/v1/lotImages/${lotNumber}?country=us&brand=cprt`
+  }
+  return absoluteUrl
 }
 
 function parseNumeric(value) {
@@ -270,10 +277,6 @@ function mapRow(rawRow, headerMap, jobId, filePath) {
       case 'wholesale':
         mappedRow[dbField] = parseBoolean(value)
         break
-      case 'imageUrl':
-      case 'imageThumbnail':
-        mappedRow[dbField] = stripMarkdownLinks(value)
-        break
       case 'lotNumber':
       case 'year':
       case 'yardNumber':
@@ -301,6 +304,9 @@ function mapRow(rawRow, headerMap, jobId, filePath) {
   const lotNumber = mappedRow.lotNumber
   if (!lotNumber) return null
 
+  mappedRow.imageUrl = normalizeImageUrl(rawRow[headerMap.get('image_url') ?? ''], lotNumber)
+  mappedRow.imageThumbnail = normalizeImageUrl(rawRow[headerMap.get('image_thumbnail') ?? ''], lotNumber)
+
   mappedRow.searchText = buildSearchText(mappedRow)
   mappedRow.sourceFile = path.basename(filePath)
   mappedRow.sourceImportJobId = jobId
@@ -313,9 +319,7 @@ function shouldReplaceIncomingRow(currentRow, nextRow) {
   const currentTime = currentRow.lastUpdatedTime ?? null
   const nextTime = nextRow.lastUpdatedTime ?? null
 
-  if (!currentTime) return true
-  if (!nextTime) return true
-  return nextTime >= currentTime
+  return Boolean(nextTime && (!currentTime || nextTime > currentTime))
 }
 
 function deduplicateRows(rows) {
@@ -344,40 +348,45 @@ function deduplicateRows(rows) {
   }
 }
 
-function shouldWriteAuction(existingLastUpdatedTime, incomingLastUpdatedTime) {
-  if (!existingLastUpdatedTime) return true
-  if (!incomingLastUpdatedTime) return true
-  return incomingLastUpdatedTime > existingLastUpdatedTime
+function auctionData(mappedRow) {
+  const { yardNumber, yardName, saleDate, saleTime, timeZone, lotNumber } = mappedRow
+  const saleKey = saleDate
+    ? `${yardNumber ?? 'unknown'}:${saleDate}:${saleTime ?? 'unknown'}:${timeZone ?? 'unknown'}`
+    : `unscheduled:${yardNumber ?? 'unknown'}:${lotNumber}`
+
+  return { saleKey, yardNumber: yardNumber ?? null, yardName: yardName ?? null, saleDate: saleDate ?? null, saleTime: saleTime ?? null, timeZone: timeZone ?? null }
 }
 
-function normalizeRowForBulkUpsert(row) {
-  const normalized = {}
-
-  for (const column of AUCTION_UPSERT_COLUMNS) {
-    normalized[column] = row[column] ?? null
-  }
-
-  return normalized
+function shouldWriteLot(existingLastUpdatedTime, incomingLastUpdatedTime) {
+  if (!incomingLastUpdatedTime) return false
+  return !existingLastUpdatedTime || incomingLastUpdatedTime > existingLastUpdatedTime
 }
 
-async function applyRowMutation(mappedRow, result) {
+async function applyRowMutation(client, mappedRow, result) {
   const lotNumber = mappedRow.lotNumber
-  const existing = await db.auction.findUnique({
+  const parent = auctionData(mappedRow)
+  const auction = await client.auction.upsert({
+    where: { saleKey: parent.saleKey },
+    create: parent,
+    update: parent,
+  })
+  const existing = await client.lot.findUnique({
     where: { lotNumber },
     select: { lotNumber: true, lastUpdatedTime: true },
   })
 
   const incomingTime = mappedRow.lastUpdatedTime ?? null
+  const lotData = { ...mappedRow, auctionId: auction.id }
 
   if (existing) {
-    if (shouldWriteAuction(existing.lastUpdatedTime, incomingTime)) {
-      await db.auction.update({ where: { lotNumber }, data: mappedRow })
+    if (shouldWriteLot(existing.lastUpdatedTime, incomingTime)) {
+      await client.lot.update({ where: { lotNumber }, data: lotData })
       result.updatedRows++
     } else {
       result.skippedRows++
     }
   } else {
-    await db.auction.create({ data: mappedRow })
+    await client.lot.create({ data: lotData })
     result.insertedRows++
   }
 
@@ -395,51 +404,9 @@ async function bulkUpsertRows(rows, result) {
 
   for (let start = 0; start < deduplicatedRows.length; start += UPSERT_BATCH_SIZE) {
     const batch = deduplicatedRows.slice(start, start + UPSERT_BATCH_SIZE)
-    const lotNumbers = batch.map((row) => row.lotNumber)
-
-    const existingRows = await db.auction.findMany({
-      where: { lotNumber: { in: lotNumbers } },
-      select: { lotNumber: true, lastUpdatedTime: true },
+    await db.$transaction(async (tx) => {
+      for (const row of batch) await applyRowMutation(tx, row, result)
     })
-
-    const existingByLot = new Map(existingRows.map((row) => [row.lotNumber, row.lastUpdatedTime]))
-    const rowsToWrite = []
-
-    for (const row of batch) {
-      const existingLastUpdatedTime = existingByLot.get(row.lotNumber)
-      const incomingLastUpdatedTime = row.lastUpdatedTime ?? null
-
-      if (existingLastUpdatedTime === undefined) {
-        result.insertedRows++
-        rowsToWrite.push(row)
-        continue
-      }
-
-      if (shouldWriteAuction(existingLastUpdatedTime, incomingLastUpdatedTime)) {
-        result.updatedRows++
-        rowsToWrite.push(row)
-      } else {
-        result.skippedRows++
-      }
-    }
-
-    if (rowsToWrite.length > 0) {
-      const payload = JSON.stringify(rowsToWrite.map(normalizeRowForBulkUpsert))
-
-      await db.$executeRawUnsafe(
-        `
-          INSERT INTO "Auction" (${BULK_INSERT_COLUMNS_SQL})
-          SELECT ${BULK_SELECT_COLUMNS_SQL}
-          FROM jsonb_populate_recordset(NULL::"Auction", $1::jsonb) AS source
-          ON CONFLICT ("lotNumber") DO UPDATE
-          SET ${BULK_UPDATE_COLUMNS_SQL}
-          WHERE "Auction"."lastUpdatedTime" IS NULL
-            OR EXCLUDED."lastUpdatedTime" IS NULL
-            OR EXCLUDED."lastUpdatedTime" > "Auction"."lastUpdatedTime"
-        `,
-        payload,
-      )
-    }
   }
 
   result.processedRows += rows.length
@@ -456,7 +423,7 @@ async function flushBatch(rows, result, onProgress) {
 
     for (const mappedRow of rows) {
       try {
-        await applyRowMutation(mappedRow, result)
+        await applyRowMutation(db, mappedRow, result)
       } catch (rowErr) {
         result.failedRows++
         const rowErrMsg = rowErr instanceof Error ? rowErr.message : String(rowErr)
