@@ -27,7 +27,7 @@ export async function GET() {
 
     // Fetch basic auction info for each lotId
     const auctions = lotIds.length > 0
-      ? await db.auction.findMany({
+      ? await db.lot.findMany({
           where: { id: { in: lotIds } },
           select: {
             id: true,

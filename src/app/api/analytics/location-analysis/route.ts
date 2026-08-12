@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 export async function GET() {
   try {
     // Top 15 states by lot count
-    const stateGroups = await db.auction.groupBy({
+    const stateGroups = await db.lot.groupBy({
       by: ['locationState'],
       _count: { locationState: true },
       _avg: {
@@ -26,7 +26,7 @@ export async function GET() {
       stateGroups
         .filter((g) => g.locationState !== null)
         .map(async (g) => {
-          const topMake = await db.auction.groupBy({
+          const topMake = await db.lot.groupBy({
             by: ['make'],
             _count: { make: true },
             where: {
@@ -40,7 +40,7 @@ export async function GET() {
             take: 1,
           })
           // Total value for this state
-          const totalVal = await db.auction.aggregate({
+          const totalVal = await db.lot.aggregate({
             _sum: { estimatedRetailValue: true },
             where: { locationState: g.locationState as string },
           })
@@ -56,7 +56,7 @@ export async function GET() {
     )
 
     // Top 10 cities by lot count
-    const cityGroups = await db.auction.groupBy({
+    const cityGroups = await db.lot.groupBy({
       by: ['locationCity'],
       _count: { locationCity: true },
       where: {
@@ -77,7 +77,7 @@ export async function GET() {
       }))
 
     // Top 15 yards by count
-    const yardGroups = await db.auction.groupBy({
+    const yardGroups = await db.lot.groupBy({
       by: ['yardName'],
       _count: { yardName: true },
       where: {

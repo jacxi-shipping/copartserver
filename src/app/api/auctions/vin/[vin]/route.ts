@@ -15,7 +15,7 @@ export async function GET(
       )
     }
 
-    const auction = await db.auction.findFirst({
+    const auction = await db.lot.findFirst({
       where: { vin: vin.toUpperCase() },
     })
 

@@ -2,7 +2,7 @@ import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { getTodayStr } from '@/lib/query-builder'
 
-function validSaleDateWhere(): Prisma.AuctionWhereInput {
+function validSaleDateWhere(): Prisma.LotWhereInput {
   return {
     AND: [
       { saleDate: { not: null } },
@@ -48,19 +48,19 @@ export async function getDashboardStats(): Promise<DashboardStatsResult> {
     states,
     yards,
   ] = await Promise.all([
-    db.auction.count(),
-    db.auction.count({
+    db.lot.count(),
+    db.lot.count({
       where: {
         AND: [validSaleDateWhere(), { saleDate: { gte: todayStr } }],
       },
     }),
-    db.auction.count({ where: { saleDate: todayStr } }),
-    db.auction.count({
+    db.lot.count({ where: { saleDate: todayStr } }),
+    db.lot.count({
       where: {
         AND: [validSaleDateWhere(), { saleDate: { lt: todayStr } }],
       },
     }),
-    db.auction.count({
+    db.lot.count({
       where: {
         OR: [{ saleDate: null }, { saleDate: '' }, { saleDate: '0' }],
       },
@@ -71,18 +71,18 @@ export async function getDashboardStats(): Promise<DashboardStatsResult> {
       orderBy: { completedAt: 'desc' },
       select: { completedAt: true, createdAt: true },
     }),
-    db.auction.aggregate({
+    db.lot.aggregate({
       _max: { updatedAt: true, lastUpdatedTime: true },
     }),
-    db.auction.groupBy({
+    db.lot.groupBy({
       by: ['make'],
       where: { make: { not: null } },
     }),
-    db.auction.groupBy({
+    db.lot.groupBy({
       by: ['locationState'],
       where: { locationState: { not: null } },
     }),
-    db.auction.groupBy({
+    db.lot.groupBy({
       by: ['yardNumber'],
       where: { yardNumber: { not: null } },
     }),
@@ -110,13 +110,13 @@ export async function getSidebarCounts(): Promise<SidebarCountsResult> {
   const todayStr = getTodayStr()
 
   const [total, upcoming, today, imports] = await Promise.all([
-    db.auction.count(),
-    db.auction.count({
+    db.lot.count(),
+    db.lot.count({
       where: {
         AND: [validSaleDateWhere(), { saleDate: { gte: todayStr } }],
       },
     }),
-    db.auction.count({ where: { saleDate: todayStr } }),
+    db.lot.count({ where: { saleDate: todayStr } }),
     db.importJob.count(),
   ])
 

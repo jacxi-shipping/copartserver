@@ -10,13 +10,13 @@ export async function GET(request: NextRequest) {
     const orderBy = buildOrderBy(sort)
 
     const [auctions, total] = await Promise.all([
-      db.auction.findMany({
+      db.lot.findMany({
         where,
         orderBy,
         skip,
         take: pageSize,
       }),
-      db.auction.count({ where }),
+      db.lot.count({ where }),
     ])
 
     return NextResponse.json({

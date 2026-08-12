@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get('q')?.trim() || ''
     const todayStr = getTodayStr()
 
-    const upcomingFilter: Prisma.AuctionWhereInput = {
+    const upcomingFilter: Prisma.LotWhereInput = {
       AND: [
         { saleDate: { not: null } },
         { saleDate: { not: '' } },
@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
       ],
     }
 
-    const buildWhere = (field: string | null): Prisma.AuctionWhereInput => {
-      const conditions: Prisma.AuctionWhereInput[] = [upcomingFilter]
+    const buildWhere = (field: string | null): Prisma.LotWhereInput => {
+      const conditions: Prisma.LotWhereInput[] = [upcomingFilter]
       if (field) {
         conditions.push({ [field]: { contains: q } } as any)
       }
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [makes, models, yards, cities, states] = await Promise.all([
-      db.auction.findMany({
+      db.lot.findMany({
         where: buildWhere('make'),
         select: { make: true },
         distinct: ['make'],
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         orderBy: { make: 'asc' },
       }).then(r => r.map(item => item.make).filter(Boolean)),
 
-      db.auction.findMany({
+      db.lot.findMany({
         where: buildWhere('modelGroup'),
         select: { modelGroup: true },
         distinct: ['modelGroup'],
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         orderBy: { modelGroup: 'asc' },
       }).then(r => r.map(item => item.modelGroup).filter(Boolean)),
 
-      db.auction.findMany({
+      db.lot.findMany({
         where: buildWhere('yardName'),
         select: { yardName: true },
         distinct: ['yardName'],
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         orderBy: { yardName: 'asc' },
       }).then(r => r.map(item => item.yardName).filter(Boolean)),
 
-      db.auction.findMany({
+      db.lot.findMany({
         where: buildWhere('locationCity'),
         select: { locationCity: true },
         distinct: ['locationCity'],
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         orderBy: { locationCity: 'asc' },
       }).then(r => r.map(item => item.locationCity).filter(Boolean)),
 
-      db.auction.findMany({
+      db.lot.findMany({
         where: buildWhere('locationState'),
         select: { locationState: true },
         distinct: ['locationState'],

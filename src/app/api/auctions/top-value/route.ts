@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 
 export async function GET() {
   try {
-    const vehicles = await db.auction.findMany({
+    const vehicles = await db.lot.findMany({
       where: {
         estimatedRetailValue: { not: null, gt: 0 },
       },

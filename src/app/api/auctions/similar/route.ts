@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       where.id = { not: parseInt(excludeId, 10) }
     }
 
-    const vehicles = await db.auction.findMany({
+    const vehicles = await db.lot.findMany({
       where,
       select: {
         id: true,

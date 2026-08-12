@@ -8,7 +8,7 @@ export async function GET() {
       allAuctions,
       damageGroups,
     ] = await Promise.all([
-      db.auction.findMany({
+      db.lot.findMany({
         select: {
           estimatedRetailValue: true,
           highBid: true,
@@ -16,7 +16,7 @@ export async function GET() {
           damageDescription: true,
         },
       }),
-      db.auction.groupBy({
+      db.lot.groupBy({
         by: ['damageDescription'],
         _count: { damageDescription: true },
         orderBy: { _count: { damageDescription: 'desc' } },

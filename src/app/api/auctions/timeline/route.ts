@@ -7,7 +7,7 @@ export async function GET() {
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
     // Get all auctions with saleDate >= today
-    const auctions = await db.auction.findMany({
+    const auctions = await db.lot.findMany({
       where: {
         saleDate: { gte: todayStr },
       },

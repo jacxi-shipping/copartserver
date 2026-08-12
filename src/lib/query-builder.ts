@@ -31,7 +31,7 @@ const SORT_MAP: Record<SortField, { field: string; dir: 'asc' | 'desc' }> = {
   updated_desc: { field: 'updatedAt', dir: 'desc' },
 }
 
-export function buildOrderBy(sort: string): Prisma.AuctionOrderByWithRelationInput {
+export function buildOrderBy(sort: string): Prisma.LotOrderByWithRelationInput {
   const key = (sort || 'saleDate_asc') as SortField
   const mapping = SORT_MAP[key] || SORT_MAP.saleDate_asc
   return { [mapping.field]: mapping.dir }
@@ -77,10 +77,10 @@ export interface FilterOptions {
 }
 
 export function buildAuctionFilters(searchParams: URLSearchParams): {
-  where: Prisma.AuctionWhereInput
+  where: Prisma.LotWhereInput
   sort: string
 } {
-  const and: Prisma.AuctionWhereInput[] = []
+  const and: Prisma.LotWhereInput[] = []
   const todayStr = getTodayStr()
 
   // Search query
@@ -105,7 +105,7 @@ export function buildAuctionFilters(searchParams: URLSearchParams): {
   if (isToday) {
     and.push({ saleDate: todayStr })
   } else if (saleDateFrom || saleDateTo) {
-    const dateFilter: Prisma.StringNullableFilter<'Auction'> = {}
+    const dateFilter: Prisma.StringNullableFilter<'Lot'> = {}
     if (saleDateFrom) dateFilter.gte = saleDateFrom
     if (saleDateTo) dateFilter.lte = saleDateTo
     and.push({ saleDate: dateFilter })
@@ -196,7 +196,7 @@ export function buildAuctionFilters(searchParams: URLSearchParams): {
       if (!isNaN(parsed)) condition.lte = parsed
     }
     if (minVal || maxVal) {
-      and.push({ [dbField]: condition } as Prisma.AuctionWhereInput)
+      and.push({ [dbField]: condition } as Prisma.LotWhereInput)
     }
   }
 
@@ -226,7 +226,7 @@ export function buildAuctionFilters(searchParams: URLSearchParams): {
     }
   }
 
-  const where: Prisma.AuctionWhereInput = and.length > 0 ? { AND: and } : {}
+  const where: Prisma.LotWhereInput = and.length > 0 ? { AND: and } : {}
   const sort = searchParams.get('sort') || 'saleDate_asc'
 
   return { where, sort }

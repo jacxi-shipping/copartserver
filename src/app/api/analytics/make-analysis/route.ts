@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 export async function GET() {
   try {
     // Get top 15 makes by count with aggregate data
-    const makeGroups = await db.auction.groupBy({
+    const makeGroups = await db.lot.groupBy({
       by: ['make'],
       _count: { make: true },
       _avg: {
@@ -37,7 +37,7 @@ export async function GET() {
       }))
 
     // Overall market averages
-    const overall = await db.auction.aggregate({
+    const overall = await db.lot.aggregate({
       _avg: {
         estimatedRetailValue: true,
         highBid: true,

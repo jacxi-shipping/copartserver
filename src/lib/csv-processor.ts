@@ -167,6 +167,26 @@ function mapRow(rawRow: Record<string, string>, headerMap: Map<string, string>, 
   return mappedRow
 }
 
+function auctionData(mappedRow: Record<string, unknown>): Prisma.AuctionUncheckedCreateInput {
+  const yardNumber = mappedRow.yardNumber as number | null | undefined
+  const saleDate = mappedRow.saleDate as string | null | undefined
+  const saleTime = mappedRow.saleTime as string | null | undefined
+  const timeZone = mappedRow.timeZone as string | null | undefined
+  const lotNumber = mappedRow.lotNumber as number
+  const saleKey = saleDate
+    ? `${yardNumber ?? 'unknown'}:${saleDate}:${saleTime ?? 'unknown'}:${timeZone ?? 'unknown'}`
+    : `unscheduled:${yardNumber ?? 'unknown'}:${lotNumber}`
+
+  return {
+    saleKey,
+    yardNumber: yardNumber ?? null,
+    yardName: mappedRow.yardName as string | null | undefined,
+    saleDate: saleDate ?? null,
+    saleTime: saleTime ?? null,
+    timeZone: timeZone ?? null,
+  }
+}
+
 const BATCH_SIZE = 100
 
 /**
@@ -183,10 +203,16 @@ async function flushBatch(
     await db.$transaction(async (tx) => {
       for (const mappedRow of rows) {
         const lotNumber = mappedRow.lotNumber as number
-        const createData = mappedRow as Prisma.AuctionUncheckedCreateInput
-        const updateData = mappedRow as Prisma.AuctionUncheckedUpdateInput
+        const parentData = auctionData(mappedRow)
+        const auction = await tx.auction.upsert({
+          where: { saleKey: parentData.saleKey },
+          create: parentData,
+          update: parentData,
+        })
+        const createData = { ...mappedRow, auctionId: auction.id } as Prisma.LotUncheckedCreateInput
+        const updateData = { ...mappedRow, auctionId: auction.id } as Prisma.LotUncheckedUpdateInput
 
-        const existing = await tx.auction.findUnique({
+        const existing = await tx.lot.findUnique({
           where: { lotNumber },
           select: { lotNumber: true, lastUpdatedTime: true },
         })
@@ -200,13 +226,13 @@ async function flushBatch(
             !incomingTime
 
           if (shouldUpdate) {
-              await tx.auction.update({ where: { lotNumber }, data: updateData })
+              await tx.lot.update({ where: { lotNumber }, data: updateData })
             result.updatedRows++
           } else {
             result.skippedRows++
           }
         } else {
-            await tx.auction.create({ data: createData })
+          await tx.lot.create({ data: createData })
           result.insertedRows++
         }
         result.processedRows++
@@ -219,9 +245,15 @@ async function flushBatch(
     for (const mappedRow of rows) {
       try {
         const lotNumber = mappedRow.lotNumber as number
-        const createData = mappedRow as Prisma.AuctionUncheckedCreateInput
-        const updateData = mappedRow as Prisma.AuctionUncheckedUpdateInput
-        const existing = await db.auction.findUnique({
+        const parentData = auctionData(mappedRow)
+        const auction = await db.auction.upsert({
+          where: { saleKey: parentData.saleKey },
+          create: parentData,
+          update: parentData,
+        })
+        const createData = { ...mappedRow, auctionId: auction.id } as Prisma.LotUncheckedCreateInput
+        const updateData = { ...mappedRow, auctionId: auction.id } as Prisma.LotUncheckedUpdateInput
+        const existing = await db.lot.findUnique({
           where: { lotNumber },
           select: { lotNumber: true, lastUpdatedTime: true },
         })
@@ -232,13 +264,13 @@ async function flushBatch(
             (!existing.lastUpdatedTime && incomingTime) ||
             !incomingTime
           if (shouldUpdate) {
-            await db.auction.update({ where: { lotNumber }, data: updateData })
+              await db.lot.update({ where: { lotNumber }, data: updateData })
             result.updatedRows++
           } else {
             result.skippedRows++
           }
         } else {
-          await db.auction.create({ data: createData })
+          await db.lot.create({ data: createData })
           result.insertedRows++
         }
         result.processedRows++

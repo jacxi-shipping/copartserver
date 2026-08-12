@@ -7,13 +7,13 @@ async function safeGroupBy(
   options: {
     orderBy?: { [key: string]: 'asc' | 'desc' }
     take?: number
-    where?: Prisma.AuctionWhereInput
+    where?: Prisma.LotWhereInput
   } = {}
 ) {
-  return db.auction.groupBy({
-    by: [field] as Prisma.AuctionScalarFieldEnum[],
+  return db.lot.groupBy({
+    by: [field] as Prisma.LotScalarFieldEnum[],
     _count: { [field]: true } as Record<string, true>,
-    orderBy: (options.orderBy ?? { _count: { [field]: 'desc' } }) as Prisma.AuctionOrderByWithAggregationInput,
+    orderBy: (options.orderBy ?? { _count: { [field]: 'desc' } }) as Prisma.LotOrderByWithAggregationInput,
     take: options.take,
     where: options.where ?? undefined,
   } as any)

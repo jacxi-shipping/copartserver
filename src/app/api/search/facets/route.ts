@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const todayStr = getTodayStr()
 
     // Base filter: upcoming auctions only — use AND to avoid duplicate object keys
-    const baseFilter: Prisma.AuctionWhereInput = {
+    const baseFilter: Prisma.LotWhereInput = {
       AND: [
         { saleDate: { not: null } },
         { saleDate: { not: '' } },
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If there's a search query, add it to the filter
-    const where: Prisma.AuctionWhereInput = q
+    const where: Prisma.LotWhereInput = q
       ? {
           AND: [
             baseFilter,
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       : baseFilter
 
     // Use a simple base for range aggregates (no date filter, so we get full range)
-    const rangeFilter: Prisma.AuctionWhereInput = {}
+    const rangeFilter: Prisma.LotWhereInput = {}
 
     const [
       makesResult,
@@ -49,76 +49,76 @@ export async function GET(request: NextRequest) {
       yearRangeResult,
       odometerRangeResult,
     ] = await Promise.all([
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, make: { not: null } },
         by: ['make'],
         _count: { make: true },
         orderBy: { _count: { make: 'desc' } },
         take: 50,
       }),
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, modelGroup: { not: null } },
         by: ['modelGroup'],
         _count: { modelGroup: true },
         orderBy: { _count: { modelGroup: 'desc' } },
         take: 50,
       }),
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, locationState: { not: null } },
         by: ['locationState'],
         _count: { locationState: true },
         orderBy: { _count: { locationState: 'desc' } },
       }),
-      (db.auction.groupBy as any)({
+      (db.lot.groupBy as any)({
         where: { ...where, year: { not: null } },
         by: ['year'],
         _count: { year: true },
         orderBy: { year: 'desc' } as any,
       }) as unknown as Promise<Array<{ year: number | null; _count: { year: number } }>>,
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, damageDescription: { not: null } },
         by: ['damageDescription'],
         _count: { damageDescription: true },
         orderBy: { _count: { damageDescription: 'desc' } },
         take: 20,
       }),
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, saleTitleType: { not: null } },
         by: ['saleTitleType'],
         _count: { saleTitleType: true },
         orderBy: { _count: { saleTitleType: 'desc' } },
       }),
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, fuelType: { not: null } },
         by: ['fuelType'],
         _count: { fuelType: true },
         orderBy: { _count: { fuelType: 'desc' } },
       }),
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, transmission: { not: null } },
         by: ['transmission'],
         _count: { transmission: true },
         orderBy: { _count: { transmission: 'desc' } },
       }),
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, drive: { not: null } },
         by: ['drive'],
         _count: { drive: true },
         orderBy: { _count: { drive: 'desc' } },
       }),
-      db.auction.groupBy({
+      db.lot.groupBy({
         where: { ...where, bodyStyle: { not: null } },
         by: ['bodyStyle'],
         _count: { bodyStyle: true },
         orderBy: { _count: { bodyStyle: 'desc' } },
         take: 30,
       }),
-      db.auction.aggregate({
+      db.lot.aggregate({
         where: { ...rangeFilter, year: { not: null } },
         _min: { year: true },
         _max: { year: true },
       }),
-      db.auction.aggregate({
+      db.lot.aggregate({
         where: { ...rangeFilter, odometer: { not: null } },
         _min: { odometer: true },
         _max: { odometer: true },

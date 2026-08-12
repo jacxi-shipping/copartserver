@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch all matching auctions for export (no pagination)
-    const auctions = await db.auction.findMany({
+    const auctions = await db.lot.findMany({
       where,
       orderBy: (() => {
         const [field, dir] = (sort || 'saleDate_asc').split('_')

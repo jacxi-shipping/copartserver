@@ -75,6 +75,11 @@ const scaleIn = {
 
 type UploadPhase = 'idle' | 'uploading' | 'processing' | 'done' | 'error'
 
+function shouldUseServerUploadFallback(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -372,20 +377,53 @@ export function ImportTab() {
         return
       }
 
-      const uploadedBlob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/import/upload',
-        onUploadProgress: ({ loaded, total, percentage }) => {
-          if (cancelledRef.current) return
-          const elapsedSeconds = Math.max((Date.now() - uploadStartTimeRef.current) / 1000, 1)
-          const bytesPerSecond = loaded / elapsedSeconds
-          setUploadLoaded(loaded)
-          setUploadTotal(total)
-          setUploadProgress(percentage)
-          setUploadSpeed(bytesPerSecond)
-          setUploadETA(total > loaded && bytesPerSecond > 0 ? (total - loaded) / bytesPerSecond : 0)
-        },
-      })
+      let uploadedBlob: { url: string; pathname: string }
+
+      if (shouldUseServerUploadFallback()) {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const uploadRes = await fetch('/api/import/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const uploadData = await uploadRes.json().catch(() => null) as {
+          success?: boolean
+          data?: { url?: string; pathname?: string }
+          error?: { message?: string }
+        } | null
+
+        if (!uploadRes.ok || !uploadData?.success || !uploadData.data?.url || !uploadData.data.pathname) {
+          throw new Error(uploadData?.error?.message || 'Failed to upload file to blob storage')
+        }
+
+        uploadedBlob = {
+          url: uploadData.data.url,
+          pathname: uploadData.data.pathname,
+        }
+
+        setUploadLoaded(file.size)
+        setUploadTotal(file.size)
+        setUploadProgress(100)
+        setUploadSpeed(0)
+        setUploadETA(0)
+      } else {
+        uploadedBlob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/import/upload',
+          onUploadProgress: ({ loaded, total, percentage }) => {
+            if (cancelledRef.current) return
+            const elapsedSeconds = Math.max((Date.now() - uploadStartTimeRef.current) / 1000, 1)
+            const bytesPerSecond = loaded / elapsedSeconds
+            setUploadLoaded(loaded)
+            setUploadTotal(total)
+            setUploadProgress(percentage)
+            setUploadSpeed(bytesPerSecond)
+            setUploadETA(total > loaded && bytesPerSecond > 0 ? (total - loaded) / bytesPerSecond : 0)
+          },
+        })
+      }
 
       const completeRes = await fetch('/api/import', {
         method: 'POST',

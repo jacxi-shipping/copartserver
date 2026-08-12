@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const auctions = await db.auction.findMany({
+    const auctions = await db.lot.findMany({
       where: { id: { in: ids } },
     })
 

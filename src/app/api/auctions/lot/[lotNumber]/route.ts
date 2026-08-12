@@ -15,7 +15,7 @@ export async function GET(
       )
     }
 
-    const auction = await db.auction.findUnique({
+    const auction = await db.lot.findUnique({
       where: { lotNumber: numericLot },
     })
 

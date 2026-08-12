@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const { page, pageSize, skip } = parsePagination(searchParams)
     const todayStr = getTodayStr()
 
-    const and: Prisma.AuctionWhereInput[] = []
+    const and: Prisma.LotWhereInput[] = []
 
     if (q?.trim()) {
       and.push(buildTextSearchWhere(q))
@@ -24,18 +24,18 @@ export async function GET(request: NextRequest) {
       and.push(buildUpcomingSaleDateWhere(todayStr, includeUnscheduled))
     }
 
-    const where: Prisma.AuctionWhereInput = and.length > 0 ? { AND: and } : {}
+    const where: Prisma.LotWhereInput = and.length > 0 ? { AND: and } : {}
     const sort = searchParams.get('sort') || 'saleDate_asc'
     const orderBy = buildOrderBy(sort)
 
     const [auctions, total] = await Promise.all([
-      db.auction.findMany({
+      db.lot.findMany({
         where,
         orderBy,
         skip,
         take: pageSize,
       }),
-      db.auction.count({ where }),
+      db.lot.count({ where }),
     ])
 
     return NextResponse.json({
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     const skip = (page - 1) * pageSize
     const todayStr = getTodayStr()
 
-    const and: Prisma.AuctionWhereInput[] = []
+    const and: Prisma.LotWhereInput[] = []
 
     if (query?.trim()) {
       and.push(buildTextSearchWhere(query))
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     // Year range filter
     if (yearMin || yearMax) {
-      const yearFilter: Prisma.IntNullableFilter<'Auction'> = {}
+      const yearFilter: Prisma.IntNullableFilter<'Lot'> = {}
       if (yearMin) {
         const parsed = parseInt(String(yearMin), 10)
         if (!isNaN(parsed)) yearFilter.gte = parsed
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // Price range filter
     if (priceMin != null || priceMax != null) {
-      const priceFilter: Prisma.FloatNullableFilter<'Auction'> = {}
+      const priceFilter: Prisma.FloatNullableFilter<'Lot'> = {}
       if (priceMin != null) {
         const parsed = parseFloat(String(priceMin))
         if (!isNaN(parsed)) priceFilter.gte = parsed
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     // Odometer range filter
     if (odometerMin != null || odometerMax != null) {
-      const odometerFilter: Prisma.FloatNullableFilter<'Auction'> = {}
+      const odometerFilter: Prisma.FloatNullableFilter<'Lot'> = {}
       if (odometerMin != null) {
         const parsed = parseFloat(String(odometerMin))
         if (!isNaN(parsed)) odometerFilter.gte = parsed
@@ -149,17 +149,17 @@ export async function POST(request: NextRequest) {
       and.push(buildUpcomingSaleDateWhere(todayStr, includeUnscheduled))
     }
 
-    const where: Prisma.AuctionWhereInput = and.length > 0 ? { AND: and } : {}
+    const where: Prisma.LotWhereInput = and.length > 0 ? { AND: and } : {}
     const orderBy = buildOrderBy(sort)
 
     const [auctions, total] = await Promise.all([
-      db.auction.findMany({
+      db.lot.findMany({
         where,
         orderBy,
         skip,
         take: pageSize,
       }),
-      db.auction.count({ where }),
+      db.lot.count({ where }),
     ])
 
     return NextResponse.json({

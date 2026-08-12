@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     const { where: baseWhere, sort } = buildAuctionFilters(searchParams)
 
-    const todayFilter: import('@prisma/client').Prisma.AuctionWhereInput = {
+    const todayFilter: import('@prisma/client').Prisma.LotWhereInput = {
       saleDate: todayStr,
     }
 
@@ -22,13 +22,13 @@ export async function GET(request: NextRequest) {
     const orderBy = buildOrderBy(sort)
 
     const [auctions, total] = await Promise.all([
-      db.auction.findMany({
+      db.lot.findMany({
         where,
         orderBy,
         skip,
         take: pageSize,
       }),
-      db.auction.count({ where }),
+      db.lot.count({ where }),
     ])
 
     return NextResponse.json({

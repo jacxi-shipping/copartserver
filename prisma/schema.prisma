@@ -8,7 +8,25 @@ datasource db {
 }
 
 model Auction {
+  id          Int      @id @default(autoincrement())
+  saleKey     String   @unique
+  yardNumber  Int?
+  yardName    String?
+  saleDate    String?
+  saleTime    String?
+  timeZone    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lots        Lot[]
+
+  @@index([saleDate])
+  @@index([yardNumber])
+}
+
+model Lot {
   id                   Int       @id @default(autoincrement())
+  auctionId            Int
+  auction              Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
   sourceId             String?
   yardNumber           Int?
   yardName             String?
@@ -88,6 +106,7 @@ model Auction {
   @@index([vehicleType])
   @@index([lotNumber])
   @@index([lastUpdatedTime])
+  @@index([auctionId])
 }
 
 model ImportJob {
