@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Auction {
+  id                   Int      @id @default(autoincrement())
+  sourceId             String?
+  yardNumber           Int?
+  yardName             String?
+  saleDate             String?
+  dayOfWeek            String?
+  saleTime             String?
+  timeZone             String?
+  itemNumber           String?
+  lotNumber            Int      @unique
+  vehicleType          String?
+  year                 Int?
+  make                 String?
+  modelGroup           String?
+  modelDetail          String?
+  bodyStyle            String?
+  color                String?
+  damageDescription    String?
+  secondaryDamage      String?
+  saleTitleState       String?
+  saleTitleType        String?
+  hasKeys              Boolean?
+  lotConditionCode     String?
+  vin                  String?
+  odometer             Float?
+  odometerBrand        String?
+  estimatedRetailValue Float?
+  repairCost           Float?
+  engine               String?
+  drive                String?
+  transmission         String?
+  fuelType             String?
+  cylinders            Int?
+  runsDrives           String?
+  saleStatus           String?
+  highBid              Float?
+  specialNote          String?
+  locationCity         String?
+  locationState        String?
+  locationZip          String?
+  locationCountry      String?
+  currencyCode         String?
+  imageThumbnail       String?
+  createDatetime       DateTime?
+  gridRow              String?
+  makeOfferEligible    Boolean?
+  buyItNowPrice        Float?
+  imageUrl             String?
+  trim                 String?
+  lastUpdatedTime      DateTime?
+  rentals              Boolean?
+  wholesale            Boolean?
+  sellerName           String?
+  offsiteAddress1      String?
+  offsiteState         String?
+  offsiteCity          String?
+  offsiteZip           String?
+  saleLight            String?
+  autograde            String?
+  announcements        String?
+  searchText           String?
+  sourceFile           String?
+  sourceImportJobId    String?
+  rawData              String?
+  extraData            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([vin])
+  @@index([saleDate])
+  @@index([make])
+  @@index([modelGroup])
+  @@index([modelDetail])
+  @@index([year])
+  @@index([locationState])
+  @@index([yardNumber])
+  @@index([saleStatus])
+  @@index([vehicleType])
+  @@index([lotNumber])
+  @@index([lastUpdatedTime])
+}
+
+model ImportJob {
+  id            String   @id @default(cuid())
+  filename      String
+  fileSize      Int?
+  status        String   @default("pending")
+  startedAt     DateTime?
+  completedAt   DateTime?
+  totalRows     Int      @default(0)
+  processedRows Int      @default(0)
+  insertedRows  Int      @default(0)
+  updatedRows   Int      @default(0)
+  skippedRows   Int      @default(0)
+  failedRows    Int      @default(0)
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model LotNote {
+  id        String   @id @default(cuid())
+  lotId     Int
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([lotId])
+}
+
+model LotTag {
+  id        String   @id @default(cuid())
+  lotId     Int
+  tag       String
+  color     String   @default("emerald")
+  createdAt DateTime @default(now())
+
+  @@index([lotId])
+  @@index([tag])
+  @@unique([lotId, tag])
+}

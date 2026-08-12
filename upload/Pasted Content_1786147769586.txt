@@ -1,0 +1,3096 @@
+COPART AUCTION DATA API
+MASTER AI DEVELOPMENT PROMPT
+
+PROJECT TYPE:
+Production-ready Python REST API for Copart auction/sales data.
+
+PRIMARY TECHNOLOGY:
+Python 3.12+
+FastAPI
+PostgreSQL
+SQLAlchemy 2.x
+Alembic
+Pydantic v2
+Psycopg 3
+Redis optional
+Docker
+Docker Compose
+Pytest
+
+DATABASE:
+PostgreSQL ONLY
+
+DO NOT USE SQLITE.
+
+============================================================
+
+1. PROJECT OBJECTIVE
+   ============================================================
+
+Build a production-grade API-based Copart auction data platform.
+
+The system receives Copart CSV files such as:
+
+salesdata.csv
+
+The CSV contains auction/vehicle information.
+
+The system must:
+
+1. Import the CSV into PostgreSQL.
+2. Validate and normalize the data.
+3. Prevent duplicate lots.
+4. Update existing lots when newer data is imported.
+5. Store all important CSV fields in PostgreSQL.
+6. Provide REST APIs for accessing the data.
+7. Provide exact lot-number lookup.
+8. Provide VIN lookup.
+9. Provide advanced vehicle search.
+10. Provide upcoming-auction search.
+11. Provide today's auction search.
+12. Exclude past auctions by default.
+13. Support advanced filters.
+14. Support pagination.
+15. Support sorting.
+16. Support fuzzy search.
+17. Support fast searching across millions of records.
+18. Provide import job tracking.
+19. Provide database statistics.
+20. Provide API authentication.
+21. Provide automatic API documentation.
+22. Be Docker-ready.
+23. Be production-ready.
+24. Be easy for another frontend to consume.
+
+============================================================
+2. IMPORTANT DEVELOPMENT RULE
+=============================
+
+You are an autonomous senior Python backend engineer.
+
+Do not create a toy/demo application.
+
+Build the application as a real production backend.
+
+Do not skip important architecture.
+
+Do not replace PostgreSQL with SQLite.
+
+Do not store the CSV itself as the database.
+
+Do not read the entire database into Python for searches.
+
+Database filtering must happen inside PostgreSQL.
+
+Use indexes appropriately.
+
+Use batch processing for CSV imports.
+
+Use SQLAlchemy 2.x.
+
+Use Pydantic v2.
+
+Use type hints throughout the code.
+
+Keep business logic outside FastAPI route handlers.
+
+Write tests throughout development.
+
+After every major phase:
+
+1. Implement.
+2. Run tests.
+3. Fix errors.
+4. Verify functionality.
+5. Continue to the next phase.
+
+============================================================
+3. PROVIDED CSV FORMAT
+======================
+
+The source CSV contains columns similar to:
+
+Id
+Yard number
+Yard name
+Sale Date M/D/CY
+Day of Week
+Sale time (HHMM)
+Time Zone
+Item#
+Lot number
+Vehicle Type
+Year
+Make
+Model Group
+Model Detail
+Body Style
+Color
+Damage Description
+Secondary Damage
+Sale Title State
+Sale Title Type
+Has Keys-Yes or No
+Lot Cond. Code
+VIN
+Odometer
+Odometer Brand
+Est. Retail Value
+Repair cost
+Engine
+Drive
+Transmission
+Fuel Type
+Cylinders
+Runs/Drives
+Sale Status
+High Bid =non-vix,Sealed=Vix
+Special Note
+Location city
+Location state
+Location ZIP
+Location country
+Currency Code
+Image Thumbnail
+Create Date/Time
+Grid/Row
+Make-an-Offer Eligible
+Buy-It-Now Price
+Image URL
+Trim
+Last Updated Time
+Rentals
+Wholesale
+Seller Name
+Offsite Address1
+Offsite State
+Offsite City
+Offsite Zip
+Sale Light
+AutoGrade
+Announcements
+
+============================================================
+4. DATABASE
+===========
+
+Use PostgreSQL.
+
+Database name:
+
+copart
+
+Main table:
+
+auctions
+
+============================================================
+5. AUCTIONS TABLE
+=================
+
+Create a PostgreSQL table named:
+
+auctions
+
+Use an internal primary key:
+
+id BIGSERIAL PRIMARY KEY
+
+Do not use the CSV Id as the primary key.
+
+Use:
+
+lot_number
+
+as the unique business identifier.
+
+Constraint:
+
+UNIQUE(lot_number)
+
+============================================================
+6. AUCTION DATABASE COLUMNS
+===========================
+
+Create typed PostgreSQL columns for:
+
+id
+
+source_id
+
+yard_number
+
+yard_name
+
+sale_date
+
+day_of_week
+
+sale_time
+
+time_zone
+
+item_number
+
+lot_number
+
+vehicle_type
+
+year
+
+make
+
+model_group
+
+model_detail
+
+body_style
+
+color
+
+damage_description
+
+secondary_damage
+
+sale_title_state
+
+sale_title_type
+
+has_keys
+
+lot_condition_code
+
+vin
+
+odometer
+
+odometer_brand
+
+estimated_retail_value
+
+repair_cost
+
+engine
+
+drive
+
+transmission
+
+fuel_type
+
+cylinders
+
+runs_drives
+
+sale_status
+
+high_bid
+
+special_note
+
+location_city
+
+location_state
+
+location_zip
+
+location_country
+
+currency_code
+
+image_thumbnail
+
+create_datetime
+
+grid_row
+
+make_offer_eligible
+
+buy_it_now_price
+
+image_url
+
+trim
+
+last_updated_time
+
+rentals
+
+wholesale
+
+seller_name
+
+offsite_address1
+
+offsite_state
+
+offsite_city
+
+offsite_zip
+
+sale_light
+
+autograde
+
+announcements
+
+============================================================
+7. INTERNAL DATABASE COLUMNS
+============================
+
+Also create:
+
+sale_datetime_local
+
+sale_datetime_utc
+
+search_text
+
+source_file
+
+source_import_job_id
+
+raw_data
+
+extra_data
+
+created_at
+
+updated_at
+
+sale_datetime_local:
+
+TIMESTAMP WITH TIME ZONE
+
+sale_datetime_utc:
+
+TIMESTAMP WITH TIME ZONE
+
+raw_data:
+
+JSONB
+
+extra_data:
+
+JSONB
+
+search_text:
+
+TEXT
+
+============================================================
+8. DATABASE TYPES
+=================
+
+Use appropriate PostgreSQL types.
+
+Examples:
+
+lot_number:
+BIGINT
+
+yard_number:
+INTEGER
+
+year:
+INTEGER
+
+odometer:
+NUMERIC
+
+estimated_retail_value:
+NUMERIC(14,2)
+
+repair_cost:
+NUMERIC(14,2)
+
+high_bid:
+NUMERIC(14,2)
+
+buy_it_now_price:
+NUMERIC(14,2)
+
+cylinders:
+INTEGER
+
+sale_date:
+DATE
+
+sale_time:
+TIME
+
+timestamps:
+TIMESTAMP WITH TIME ZONE
+
+boolean fields:
+BOOLEAN
+
+============================================================
+9. NULL HANDLING
+================
+
+Empty CSV fields should generally become NULL.
+
+However, distinguish between:
+
+empty
+
+zero
+
+missing
+
+unknown
+
+Example:
+
+Sale Date = 0
+
+means:
+
+UNSCHEDULED
+
+It does NOT mean:
+
+1970-01-01
+
+============================================================
+10. CSV IMPORT PIPELINE
+=======================
+
+Create a professional CSV ingestion pipeline.
+
+Architecture:
+
+CSV
+↓
+File Validation
+↓
+Column Validation
+↓
+Streaming/Chunk Reading
+↓
+Row Normalization
+↓
+Data Validation
+↓
+Datetime Conversion
+↓
+Duplicate Detection
+↓
+PostgreSQL Batch Upsert
+↓
+Import Statistics
+
+============================================================
+11. CSV IMPORT MEMORY REQUIREMENT
+=================================
+
+Do not load a huge CSV entirely into RAM.
+
+Process in chunks.
+
+Recommended initial batch:
+
+5000 rows
+
+Make this configurable:
+
+IMPORT_BATCH_SIZE
+
+============================================================
+12. CSV COLUMN VALIDATION
+=========================
+
+When importing a CSV:
+
+1. Read headers.
+2. Normalize headers.
+3. Compare against expected columns.
+4. Detect missing required columns.
+5. Detect unknown columns.
+6. Preserve unknown columns in extra_data.
+7. Produce a validation report.
+
+============================================================
+13. REQUIRED CSV COLUMNS
+========================
+
+At minimum require:
+
+Lot number
+
+Sale Date M/D/CY
+
+Sale time (HHMM)
+
+Time Zone
+
+Year
+
+Make
+
+Model Group
+
+Model Detail
+
+VIN
+
+Sale Status
+
+Location state
+
+============================================================
+14. DATE PARSING
+================
+
+CSV dates look like:
+
+20260813
+
+20260814
+
+0
+
+Format:
+
+YYYYMMDD
+
+Convert:
+
+20260813
+
+to:
+
+2026-08-13
+
+If:
+
+20260814
+
+then:
+
+2026-08-14
+
+If:
+
+0
+
+then:
+
+sale_date = NULL
+
+sale_datetime_local = NULL
+
+sale_datetime_utc = NULL
+
+============================================================
+15. SALE TIME PARSING
+=====================
+
+CSV times are usually:
+
+HHMM
+
+Examples:
+
+1200
+
+0930
+
+1530
+
+1700
+
+Convert:
+
+1200 -> 12:00:00
+
+930 -> 09:30:00
+
+1530 -> 15:30:00
+
+Handle missing/invalid values safely.
+
+============================================================
+16. TIMEZONE HANDLING
+=====================
+
+The CSV may contain:
+
+PST
+PDT
+MST
+MDT
+CST
+CDT
+EST
+EDT
+
+Use Python zoneinfo.
+
+Map:
+
+PST/PDT -> America/Los_Angeles
+
+MST/MDT -> America/Denver
+
+CST/CDT -> America/Chicago
+
+EST/EDT -> America/New_York
+
+Do not perform naive timezone conversion.
+
+Build:
+
+local datetime
+
+then:
+
+UTC datetime
+
+Example:
+
+20260814
+1200
+PDT
+
+becomes:
+
+2026-08-14 12:00:00 America/Los_Angeles
+
+and:
+
+2026-08-14 19:00:00 UTC
+
+============================================================
+17. UPCOMING AUCTION LOGIC
+==========================
+
+This is a critical feature.
+
+The system must determine whether an auction is still upcoming based on:
+
+sale_datetime_utc
+
+An auction is upcoming if:
+
+sale_datetime_utc >= current UTC time
+
+Therefore:
+
+Yesterday:
+EXCLUDE
+
+Today before sale time:
+INCLUDE
+
+Today after sale time:
+EXCLUDE
+
+Tomorrow:
+INCLUDE
+
+Future:
+INCLUDE
+
+Unscheduled:
+EXCLUDE by default
+
+============================================================
+18. TODAY LOGIC
+===============
+
+Create:
+
+GET /api/v1/auctions/today
+
+Default behavior:
+
+Return only auctions scheduled today that have not yet passed.
+
+Optional:
+
+only_upcoming=false
+
+will return all auctions scheduled today.
+
+============================================================
+19. UPCOMING ENDPOINT
+=====================
+
+Create:
+
+GET /api/v1/auctions/upcoming
+
+Example:
+
+GET /api/v1/auctions/upcoming?page=1&page_size=100
+
+Return:
+
+today's remaining auctions
+
+tomorrow's auctions
+
+future auctions
+
+Sort:
+
+sale_datetime_utc ASC
+
+============================================================
+20. LOT LOOKUP
+==============
+
+Create:
+
+GET /api/v1/auctions/lot/{lot_number}
+
+Example:
+
+GET /api/v1/auctions/lot/48301246
+
+The response must contain the complete auction record.
+
+If not found:
+
+HTTP 404
+
+Example:
+
+{
+"success": false,
+"error": {
+"code": "LOT_NOT_FOUND",
+"message": "Auction lot 48301246 was not found"
+}
+}
+
+============================================================
+21. VIN LOOKUP
+==============
+
+Create:
+
+GET /api/v1/auctions/vin/{vin}
+
+VIN must have an index.
+
+Search should be case-insensitive.
+
+============================================================
+22. ID LOOKUP
+=============
+
+Create:
+
+GET /api/v1/auctions/{id}
+
+Return the database record.
+
+============================================================
+23. GENERAL AUCTION API
+=======================
+
+Create:
+
+GET /api/v1/auctions
+
+Support:
+
+page
+
+page_size
+
+sort
+
+sort_order
+
+filters
+
+Never return an unlimited number of rows.
+
+============================================================
+24. SEARCH API
+==============
+
+Create:
+
+GET /api/v1/search
+
+Example:
+
+GET /api/v1/search?q=4runner
+
+Default behavior:
+
+SEARCH + UPCOMING ONLY
+
+That means past auctions are excluded.
+
+============================================================
+25. SEARCH EXAMPLE
+==================
+
+If the database contains:
+
+MAKE = TOYOTA
+
+MODEL GROUP = 4RUNNER
+
+MODEL DETAIL = 4RUNNER
+
+Then:
+
+?q=4runner
+
+must find it.
+
+Also:
+
+?q=4 runner
+
+must find it.
+
+Also:
+
+?q=Toyota 4 Runner
+
+must find it.
+
+Also:
+
+?q=TOYOTA 4RUNNER
+
+must find it.
+
+============================================================
+26. SEARCH NORMALIZATION
+========================
+
+Normalize:
+
+lowercase
+
+uppercase
+
+spaces
+
+hyphens
+
+underscores
+
+punctuation
+
+Examples:
+
+4 runner
+
+4-runner
+
+4_runner
+
+4runner
+
+should normalize toward the same searchable representation.
+
+============================================================
+27. SEARCH FIELDS
+=================
+
+Search across:
+
+make
+
+model_group
+
+model_detail
+
+trim
+
+body_style
+
+vehicle_type
+
+color
+
+damage_description
+
+secondary_damage
+
+engine
+
+drive
+
+transmission
+
+fuel_type
+
+runs_drives
+
+sale_status
+
+location_city
+
+location_state
+
+yard_name
+
+seller_name
+
+special_note
+
+announcements
+
+vin
+
+lot_number
+
+============================================================
+28. SEARCH PRIORITY
+===================
+
+Ranking should prioritize:
+
+1. Exact lot number
+2. Exact VIN
+3. Exact make + model
+4. Exact model group
+5. Exact model detail
+6. Make
+7. Trim
+8. Other searchable fields
+
+============================================================
+29. POST SEARCH API
+===================
+
+Also implement:
+
+POST /api/v1/search
+
+Request:
+
+{
+"query": "4 runner",
+"make": "TOYOTA",
+"year_min": 2020,
+"year_max": 2026,
+"states": ["CA", "NV"],
+"upcoming_only": true,
+"include_unscheduled": false,
+"page": 1,
+"page_size": 50,
+"sort": "sale_datetime_asc"
+}
+
+============================================================
+30. ADVANCED FILTERS
+====================
+
+Support:
+
+q
+
+lot_number
+
+vin
+
+make
+
+model_group
+
+model_detail
+
+trim
+
+year
+
+year_min
+
+year_max
+
+vehicle_type
+
+body_style
+
+color
+
+damage
+
+secondary_damage
+
+sale_title_state
+
+sale_title_type
+
+has_keys
+
+lot_condition_code
+
+odometer_min
+
+odometer_max
+
+estimated_retail_value_min
+
+estimated_retail_value_max
+
+repair_cost_min
+
+repair_cost_max
+
+engine
+
+drive
+
+transmission
+
+fuel_type
+
+cylinders
+
+runs_drives
+
+sale_status
+
+location_city
+
+location_state
+
+location_zip
+
+yard_number
+
+yard_name
+
+seller_name
+
+sale_light
+
+autograde
+
+make_offer_eligible
+
+buy_it_now_min
+
+buy_it_now_max
+
+sale_date_from
+
+sale_date_to
+
+today
+
+upcoming_only
+
+include_past
+
+include_unscheduled
+
+============================================================
+31. SEARCH DATE MODES
+=====================
+
+Default:
+
+upcoming_only=true
+
+Support:
+
+upcoming_only=true
+
+include_past=true
+
+today=true
+
+include_unscheduled=true
+
+Examples:
+
+/search?q=4runner
+
+Returns upcoming only.
+
+/search?q=4runner&include_past=true
+
+Returns historical + upcoming.
+
+/search?q=4runner&today=true
+
+Returns today's matches.
+
+/search?q=4runner&include_unscheduled=true
+
+Allows unscheduled records.
+
+============================================================
+32. PAGINATION
+==============
+
+Default:
+
+page=1
+
+page_size=50
+
+Maximum:
+
+500
+
+Response:
+
+{
+"success": true,
+"pagination": {
+"page": 1,
+"page_size": 50,
+"total": 1000,
+"total_pages": 20,
+"has_next": true,
+"has_previous": false
+},
+"data": []
+}
+
+============================================================
+33. SORTING
+===========
+
+Support:
+
+sale_datetime_asc
+
+sale_datetime_desc
+
+year_asc
+
+year_desc
+
+price_asc
+
+price_desc
+
+odometer_asc
+
+odometer_desc
+
+lot_number_asc
+
+lot_number_desc
+
+updated_desc
+
+Default:
+
+sale_datetime_asc
+
+============================================================
+34. POSTGRESQL SEARCH
+=====================
+
+Enable:
+
+pg_trgm
+
+Migration should execute:
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+Create trigram indexes where appropriate.
+
+============================================================
+35. SEARCH TEXT
+===============
+
+Create:
+
+search_text TEXT
+
+Build it from:
+
+make
+
+model_group
+
+model_detail
+
+trim
+
+body_style
+
+vehicle_type
+
+color
+
+damage_description
+
+secondary_damage
+
+engine
+
+drive
+
+transmission
+
+fuel_type
+
+runs_drives
+
+sale_status
+
+location_city
+
+location_state
+
+yard_name
+
+seller_name
+
+special_note
+
+announcements
+
+vin
+
+lot_number
+
+Normalize it before storing.
+
+============================================================
+36. SEARCH INDEX
+================
+
+Create a PostgreSQL GIN trigram index on:
+
+search_text
+
+Use PostgreSQL database-side searching.
+
+Do not retrieve everything into Python.
+
+============================================================
+37. EXACT LOOKUP INDEXES
+========================
+
+Create indexes on:
+
+lot_number
+
+vin
+
+sale_datetime_utc
+
+sale_date
+
+make
+
+model_group
+
+model_detail
+
+year
+
+location_state
+
+yard_number
+
+sale_status
+
+vehicle_type
+
+last_updated_time
+
+============================================================
+38. UPSERT
+==========
+
+When the same lot number appears again:
+
+DO NOT create another record.
+
+Use:
+
+lot_number
+
+as conflict key.
+
+If incoming Last Updated Time is newer:
+
+update existing record.
+
+If incoming record is older:
+
+do not overwrite newer data.
+
+============================================================
+39. IMPORT JOB TABLE
+====================
+
+Create:
+
+import_jobs
+
+Fields:
+
+id
+
+filename
+
+file_size
+
+status
+
+started_at
+
+completed_at
+
+total_rows
+
+processed_rows
+
+inserted_rows
+
+updated_rows
+
+skipped_rows
+
+failed_rows
+
+error_message
+
+created_at
+
+updated_at
+
+Statuses:
+
+pending
+
+processing
+
+completed
+
+failed
+
+cancelled
+
+============================================================
+40. IMPORT ENDPOINT
+===================
+
+Create:
+
+POST /api/v1/import
+
+Multipart file:
+
+file
+
+Example:
+
+curl -X POST 
+-F "file=@salesdata.csv" 
+http://localhost:8000/api/v1/import
+
+Return:
+
+{
+"success": true,
+"job_id": "UUID",
+"status": "processing"
+}
+
+============================================================
+41. IMPORT STATUS
+=================
+
+Create:
+
+GET /api/v1/import/{job_id}
+
+Example response:
+
+{
+"success": true,
+"data": {
+"job_id": "...",
+"status": "completed",
+"total_rows": 100000,
+"processed_rows": 100000,
+"inserted_rows": 90000,
+"updated_rows": 9500,
+"skipped_rows": 300,
+"failed_rows": 200
+}
+}
+
+============================================================
+42. IMPORT PREVIEW
+==================
+
+Create:
+
+POST /api/v1/import/preview
+
+It should NOT insert anything.
+
+Return:
+
+detected columns
+
+missing columns
+
+unknown columns
+
+sample rows
+
+estimated row count
+
+date range
+
+make count
+
+state count
+
+unscheduled count
+
+validation errors
+
+============================================================
+43. IMPORT ERROR HANDLING
+=========================
+
+A bad row must NOT automatically terminate the entire import.
+
+For each invalid row:
+
+record:
+
+row number
+
+field
+
+value
+
+error
+
+Continue processing valid rows.
+
+============================================================
+44. RAW DATA
+============
+
+Preserve original row data in:
+
+raw_data JSONB
+
+Unknown fields can be stored in:
+
+extra_data JSONB
+
+However:
+
+normal searches must use typed columns.
+
+============================================================
+45. IMAGE URL HANDLING
+======================
+
+The CSV may contain Markdown-style URLs.
+
+Example:
+
+http://example.com/image
+
+Extract and store the actual URL.
+
+Store:
+
+image_url
+
+image_thumbnail
+
+Do not download images during import.
+
+============================================================
+46. BOOLEAN NORMALIZATION
+=========================
+
+Normalize:
+
+YES
+
+NO
+
+Y
+
+N
+
+TRUE
+
+FALSE
+
+Examples:
+
+has_keys
+
+make_offer_eligible
+
+rentals
+
+wholesale
+
+into PostgreSQL BOOLEAN.
+
+============================================================
+47. API RESPONSE FORMAT
+=======================
+
+All responses should follow a consistent structure.
+
+Success:
+
+{
+"success": true,
+"data": {}
+}
+
+List:
+
+{
+"success": true,
+"pagination": {},
+"data": []
+}
+
+Error:
+
+{
+"success": false,
+"error": {
+"code": "...",
+"message": "..."
+}
+}
+
+============================================================
+48. API ROUTES
+==============
+
+Implement:
+
+GET /health
+
+GET /api/v1/stats
+
+POST /api/v1/import
+
+POST /api/v1/import/preview
+
+GET /api/v1/import/{job_id}
+
+GET /api/v1/auctions
+
+GET /api/v1/auctions/{id}
+
+GET /api/v1/auctions/lot/{lot_number}
+
+GET /api/v1/auctions/vin/{vin}
+
+GET /api/v1/auctions/upcoming
+
+GET /api/v1/auctions/today
+
+GET /api/v1/search
+
+POST /api/v1/search
+
+GET /api/v1/autocomplete
+
+GET /api/v1/search/facets
+
+============================================================
+49. STATS API
+=============
+
+Create:
+
+GET /api/v1/stats
+
+Return:
+
+total auctions
+
+upcoming auctions
+
+today auctions
+
+past auctions
+
+unscheduled auctions
+
+unique makes
+
+unique states
+
+unique yards
+
+last import
+
+last update
+
+============================================================
+50. AUTOCOMPLETE
+================
+
+Create:
+
+GET /api/v1/autocomplete?q=toy
+
+Return:
+
+makes
+
+models
+
+yards
+
+cities
+
+states
+
+Example:
+
+{
+"success": true,
+"data": {
+"makes": [
+"TOYOTA"
+],
+"models": [
+"4RUNNER",
+"TACOMA"
+]
+}
+}
+
+============================================================
+51. FACETS
+==========
+
+Create:
+
+GET /api/v1/search/facets?q=4runner
+
+Return counts for:
+
+makes
+
+models
+
+states
+
+years
+
+damage
+
+title types
+
+fuel types
+
+transmissions
+
+drive
+
+============================================================
+52. SECURITY
+============
+
+Implement API key authentication.
+
+Environment:
+
+API_AUTH_ENABLED=false
+
+API_KEY=change-me
+
+When enabled:
+
+require:
+
+X-API-Key
+
+Protect import endpoints by default.
+
+Never hardcode API keys.
+
+============================================================
+53. CORS
+========
+
+Configure through environment variables.
+
+Example:
+
+CORS_ORIGINS=[http://localhost:3000,http://localhost:5173](http://localhost:3000,http://localhost:5173)
+
+Do not use unrestricted CORS in production.
+
+============================================================
+54. LOGGING
+===========
+
+Implement structured logging.
+
+Log:
+
+request ID
+
+method
+
+endpoint
+
+status
+
+duration
+
+import ID
+
+database errors
+
+validation errors
+
+Never log:
+
+API keys
+
+passwords
+
+secrets
+
+============================================================
+55. PROJECT STRUCTURE
+=====================
+
+Use:
+
+copart-api/
+
+```
+app/
+
+    main.py
+
+    config.py
+
+    logging.py
+
+    database/
+
+        session.py
+
+        base.py
+
+    models/
+
+        auction.py
+
+        import_job.py
+
+    schemas/
+
+        auction.py
+
+        search.py
+
+        import_job.py
+
+        common.py
+
+    api/
+
+        auctions.py
+
+        search.py
+
+        imports.py
+
+        health.py
+
+        stats.py
+
+    services/
+
+        csv_importer.py
+
+        auction_service.py
+
+        search_service.py
+
+        normalization.py
+
+        datetime_service.py
+
+        import_service.py
+
+    repositories/
+
+        auction_repository.py
+
+        import_repository.py
+
+    utils/
+
+        text.py
+
+        pagination.py
+
+        urls.py
+
+
+migrations/
+
+
+tests/
+
+    test_import.py
+
+    test_search.py
+
+    test_dates.py
+
+    test_auctions.py
+
+    test_filters.py
+
+    test_pagination.py
+
+
+scripts/
+
+    import_csv.py
+
+
+data/
+
+
+Dockerfile
+
+docker-compose.yml
+
+pyproject.toml
+
+alembic.ini
+
+.env.example
+
+.gitignore
+
+README.md
+```
+
+============================================================
+56. SQLALCHEMY
+==============
+
+Use SQLAlchemy 2.x.
+
+Use declarative models.
+
+Use typed mapped columns.
+
+Use async PostgreSQL where appropriate.
+
+Do not use deprecated SQLAlchemy APIs.
+
+============================================================
+57. PYDANTIC
+============
+
+Use Pydantic v2.
+
+Create separate schemas for:
+
+AuctionResponse
+
+AuctionListResponse
+
+SearchRequest
+
+SearchResponse
+
+ImportResponse
+
+ImportJobResponse
+
+StatsResponse
+
+ErrorResponse
+
+============================================================
+58. ALEMBIC
+===========
+
+All database schema changes must use Alembic.
+
+Initial migration must create:
+
+auctions
+
+import_jobs
+
+indexes
+
+constraints
+
+pg_trgm extension
+
+============================================================
+59. DOCKER
+==========
+
+Create Dockerfile.
+
+Create docker-compose.yml.
+
+Services:
+
+api
+
+postgres
+
+Optional:
+
+redis
+
+worker
+
+PostgreSQL configuration:
+
+database:
+
+copart
+
+user:
+
+copart
+
+password:
+
+copart
+
+Use environment variables rather than hardcoded credentials in production.
+
+============================================================
+60. ENVIRONMENT VARIABLES
+=========================
+
+Create:
+
+.env.example
+
+Include:
+
+APP_NAME=Copart Auction API
+
+ENVIRONMENT=development
+
+DATABASE_URL=postgresql+psycopg://copart:copart@postgres:5432/copart
+
+API_AUTH_ENABLED=false
+
+API_KEY=change-me
+
+CORS_ORIGINS=http://localhost:3000
+
+IMPORT_BATCH_SIZE=5000
+
+MAX_PAGE_SIZE=500
+
+LOG_LEVEL=INFO
+
+DB_POOL_SIZE=10
+
+DB_MAX_OVERFLOW=20
+
+============================================================
+61. API DOCUMENTATION
+=====================
+
+FastAPI must provide:
+
+/docs
+
+/redoc
+
+/openapi.json
+
+Every endpoint must have:
+
+description
+
+parameters
+
+request schema
+
+response schema
+
+error responses
+
+examples
+
+============================================================
+62. TESTING
+===========
+
+Use pytest.
+
+Test:
+
+CSV import
+
+CSV validation
+
+malformed rows
+
+missing values
+
+date parsing
+
+time parsing
+
+timezone conversion
+
+unscheduled records
+
+duplicate imports
+
+upserts
+
+older-data protection
+
+lot lookup
+
+VIN lookup
+
+search
+
+fuzzy search
+
+4runner search
+
+pagination
+
+sorting
+
+filters
+
+today logic
+
+upcoming logic
+
+past exclusion
+
+authentication
+
+health endpoint
+
+============================================================
+63. CRITICAL DATE TESTS
+=======================
+
+Test:
+
+Auction yesterday:
+
+EXCLUDE
+
+Auction today before sale time:
+
+INCLUDE
+
+Auction today after sale time:
+
+EXCLUDE
+
+Auction tomorrow:
+
+INCLUDE
+
+Auction next month:
+
+INCLUDE
+
+sale_date=0:
+
+EXCLUDE from upcoming
+
+============================================================
+64. CRITICAL SEARCH TESTS
+=========================
+
+The following must all find Toyota 4Runner records:
+
+4runner
+
+4 runner
+
+4-runner
+
+Toyota 4Runner
+
+Toyota 4 Runner
+
+TOYOTA 4RUNNER
+
+============================================================
+65. PERFORMANCE
+===============
+
+The application must be designed for:
+
+100K records
+
+1M records
+
+10M+ records
+
+Requirements:
+
+No full-table loading into Python.
+
+No unbounded API responses.
+
+Use PostgreSQL indexes.
+
+Use batch inserts.
+
+Use bulk upserts.
+
+Use pagination.
+
+Use efficient SQL queries.
+
+Use EXPLAIN/ANALYZE when optimizing.
+
+============================================================
+66. OPTIONAL REDIS
+==================
+
+Do not make Redis mandatory for the first working version.
+
+Design the system so Redis can later provide:
+
+search caching
+
+upcoming auction caching
+
+rate limiting
+
+background import jobs
+
+============================================================
+67. BACKGROUND IMPORT
+=====================
+
+For very large CSV files:
+
+FastAPI
+↓
+Import Job
+↓
+Background Worker
+↓
+PostgreSQL
+
+The initial implementation can use a simple background worker.
+
+The architecture must allow migration to Celery/RQ later.
+
+============================================================
+68. COMMAND LINE IMPORT
+=======================
+
+Create:
+
+python -m scripts.import_csv salesdata.csv
+
+Output:
+
+Import started
+
+File: salesdata.csv
+
+Rows processed: ...
+
+Inserted: ...
+
+Updated: ...
+
+Skipped: ...
+
+Failed: ...
+
+Import completed
+
+============================================================
+69. README
+==========
+
+Create a complete README.
+
+Include:
+
+project architecture
+
+requirements
+
+installation
+
+PostgreSQL installation
+
+Docker installation
+
+environment variables
+
+database migrations
+
+CSV import
+
+API usage
+
+search examples
+
+filter examples
+
+date behavior
+
+authentication
+
+testing
+
+production deployment
+
+troubleshooting
+
+============================================================
+70. API EXAMPLES
+================
+
+LOT:
+
+GET /api/v1/auctions/lot/48301246
+
+SEARCH:
+
+GET /api/v1/search?q=4runner
+
+UPCOMING:
+
+GET /api/v1/auctions/upcoming
+
+TODAY:
+
+GET /api/v1/auctions/today
+
+TOYOTA:
+
+GET /api/v1/search?make=TOYOTA
+
+CALIFORNIA:
+
+GET /api/v1/search?location_state=CA
+
+YEAR:
+
+GET /api/v1/search?year_min=2020&year_max=2026
+
+DAMAGE:
+
+GET /api/v1/search?damage=FRONT%20END
+
+RUN AND DRIVE:
+
+GET /api/v1/search?runs_drives=Run%20%26%20Drive%20Verified
+
+VIN:
+
+GET /api/v1/auctions/vin/WBAYE8C52ED135424
+
+============================================================
+71. EXAMPLE POST SEARCH
+=======================
+
+POST:
+
+/api/v1/search
+
+Body:
+
+{
+"query": "4 runner",
+"make": "TOYOTA",
+"year_min": 2020,
+"year_max": 2026,
+"states": ["CA"],
+"upcoming_only": true,
+"page": 1,
+"page_size": 50
+}
+
+============================================================
+72. RESPONSE EXAMPLE
+====================
+
+{
+"success": true,
+"query": "4runner",
+"pagination": {
+"page": 1,
+"page_size": 50,
+"total": 24,
+"total_pages": 1,
+"has_next": false,
+"has_previous": false
+},
+"data": [
+{
+"lot_number": 12345678,
+"year": 2022,
+"make": "TOYOTA",
+"model_group": "4RUNNER",
+"model_detail": "4RUNNER",
+"sale_datetime_local": "2026-08-10T12:00:00-07:00",
+"sale_datetime_utc": "2026-08-10T19:00:00Z",
+"location_city": "VALLEJO",
+"location_state": "CA",
+"damage_description": "FRONT END",
+"runs_drives": "Run & Drive Verified",
+"image_thumbnail": "...",
+"image_url": "..."
+}
+]
+}
+
+============================================================
+73. IMPORT DUPLICATE TEST
+=========================
+
+Import salesdata.csv.
+
+Record number of rows.
+
+Import salesdata.csv again.
+
+The second import must NOT double the number of auctions.
+
+============================================================
+74. UPDATE TEST
+===============
+
+Import:
+
+old.csv
+
+Then import:
+
+new.csv
+
+If the same lot exists and the new Last Updated Time is newer:
+
+UPDATE.
+
+If old.csv is imported again:
+
+do not overwrite the newer record.
+
+============================================================
+75. DATA QUALITY
+================
+
+Create import validation for:
+
+invalid dates
+
+invalid times
+
+invalid VIN
+
+invalid year
+
+invalid numbers
+
+missing lot number
+
+invalid timezone
+
+malformed URLs
+
+Do not terminate an entire import because of a small number of invalid records.
+
+============================================================
+76. FUTURE COMPATIBILITY
+========================
+
+Copart may add CSV columns in future versions.
+
+The system must:
+
+detect unknown columns
+
+preserve them in extra_data
+
+continue importing when safe
+
+Do not silently destroy unknown data.
+
+============================================================
+77. API ARCHITECTURE
+====================
+
+Use:
+
+FastAPI Routes
+↓
+Pydantic Schemas
+↓
+Services
+↓
+Repositories
+↓
+SQLAlchemy
+↓
+PostgreSQL
+
+Routes must remain thin.
+
+Business logic belongs in services.
+
+Database operations belong in repositories.
+
+============================================================
+78. ERROR SYSTEM
+================
+
+Create standardized application errors.
+
+Examples:
+
+LOT_NOT_FOUND
+
+VIN_NOT_FOUND
+
+INVALID_CSV
+
+INVALID_DATE
+
+INVALID_TIME
+
+INVALID_FILTER
+
+IMPORT_FAILED
+
+DATABASE_ERROR
+
+UNAUTHORIZED
+
+RATE_LIMITED
+
+Use correct HTTP status codes.
+
+============================================================
+79. HEALTH
+==========
+
+Create:
+
+GET /health
+
+Return:
+
+{
+"status": "ok",
+"database": "connected",
+"version": "1.0.0"
+}
+
+If PostgreSQL is unavailable:
+
+HTTP 503
+
+============================================================
+80. PRODUCTION REQUIREMENTS
+===========================
+
+The final system must be:
+
+modular
+
+typed
+
+tested
+
+secure
+
+scalable
+
+documented
+
+Docker-compatible
+
+PostgreSQL-native
+
+API-first
+
+maintainable
+
+============================================================
+81. DEVELOPMENT PHASES
+======================
+
+PHASE 1
+PROJECT INITIALIZATION
+
+Create:
+
+FastAPI application
+
+project structure
+
+pyproject.toml
+
+configuration
+
+logging
+
+environment support
+
+basic health endpoint
+
+Acceptance:
+
+GET /health works.
+
+---
+
+PHASE 2
+POSTGRESQL
+
+Configure:
+
+PostgreSQL
+
+SQLAlchemy
+
+connection pooling
+
+database session
+
+Alembic
+
+Acceptance:
+
+Application successfully connects to PostgreSQL.
+
+---
+
+PHASE 3
+DATABASE MODEL
+
+Create:
+
+auctions table
+
+import_jobs table
+
+constraints
+
+indexes
+
+Acceptance:
+
+alembic upgrade head
+
+works successfully.
+
+---
+
+PHASE 4
+CSV NORMALIZATION
+
+Implement:
+
+header normalization
+
+null handling
+
+boolean conversion
+
+numeric conversion
+
+URL extraction
+
+date conversion
+
+time conversion
+
+timezone conversion
+
+Acceptance:
+
+Sample CSV rows normalize correctly.
+
+---
+
+PHASE 5
+CSV IMPORTER
+
+Implement:
+
+chunk processing
+
+validation
+
+batch inserts
+
+upserts
+
+duplicate protection
+
+Acceptance:
+
+salesdata.csv imports successfully.
+
+---
+
+PHASE 6
+IMPORT JOBS
+
+Implement:
+
+job creation
+
+job status
+
+progress
+
+statistics
+
+errors
+
+Acceptance:
+
+POST /api/v1/import
+
+returns a job ID.
+
+---
+
+PHASE 7
+LOT API
+
+Implement:
+
+all auctions
+
+single auction
+
+lot lookup
+
+VIN lookup
+
+Acceptance:
+
+lot 48301246 returns correct data.
+
+---
+
+PHASE 8
+DATE ENGINE
+
+Implement:
+
+sale_datetime_local
+
+sale_datetime_utc
+
+timezone mapping
+
+upcoming logic
+
+today logic
+
+Acceptance:
+
+past auctions are correctly excluded.
+
+---
+
+PHASE 9
+UPCOMING API
+
+Implement:
+
+/upcoming
+
+/today
+
+Acceptance:
+
+only relevant auctions are returned.
+
+---
+
+PHASE 10
+SEARCH ENGINE
+
+Implement:
+
+query normalization
+
+search_text
+
+PostgreSQL pg_trgm
+
+fuzzy matching
+
+ranking
+
+Acceptance:
+
+4runner
+
+4 runner
+
+Toyota 4Runner
+
+all work.
+
+---
+
+PHASE 11
+ADVANCED FILTERING
+
+Implement all filters.
+
+Acceptance:
+
+combined filters work.
+
+---
+
+PHASE 12
+PAGINATION
+
+Implement:
+
+page
+
+page_size
+
+total
+
+total_pages
+
+has_next
+
+has_previous
+
+Acceptance:
+
+large result sets paginate correctly.
+
+---
+
+PHASE 13
+SORTING
+
+Implement sorting options.
+
+Acceptance:
+
+all supported sorts work.
+
+---
+
+PHASE 14
+AUTOCOMPLETE
+
+Implement:
+
+make autocomplete
+
+model autocomplete
+
+yard autocomplete
+
+location autocomplete
+
+---
+
+PHASE 15
+FACETS
+
+Implement:
+
+make counts
+
+state counts
+
+year counts
+
+damage counts
+
+fuel counts
+
+transmission counts
+
+---
+
+PHASE 16
+AUTHENTICATION
+
+Implement:
+
+X-API-Key
+
+environment-controlled authentication
+
+---
+
+PHASE 17
+TESTING
+
+Create full pytest suite.
+
+Target:
+
+high coverage of core business logic.
+
+---
+
+PHASE 18
+DOCKER
+
+Create:
+
+Dockerfile
+
+docker-compose.yml
+
+Acceptance:
+
+docker compose up --build
+
+starts the full system.
+
+---
+
+PHASE 19
+PERFORMANCE
+
+Test with large datasets.
+
+Analyze:
+
+search queries
+
+lot lookup
+
+upcoming query
+
+filter queries
+
+pagination
+
+Add indexes only where useful.
+
+---
+
+PHASE 20
+FINAL DOCUMENTATION
+
+Complete:
+
+README
+
+API examples
+
+environment documentation
+
+deployment documentation
+
+troubleshooting
+
+============================================================
+82. FINAL ACCEPTANCE TEST
+=========================
+
+After completing all phases:
+
+1. Start PostgreSQL.
+
+2. Start FastAPI.
+
+3. Run migrations.
+
+4. Import the provided salesdata.csv.
+
+5. Verify database row count.
+
+6. Verify no duplicate lot numbers.
+
+7. Retrieve:
+
+42009886
+
+8. Retrieve:
+
+48301246
+
+9. Search:
+
+4 runner
+
+10. Search:
+
+4runner
+
+11. Search:
+
+Toyota 4Runner
+
+12. Search:
+
+BMW
+
+13. Filter:
+
+make=TOYOTA
+
+14. Filter:
+
+location_state=CA
+
+15. Filter:
+
+year_min=2020
+
+16. Filter:
+
+damage=FRONT END
+
+17. Retrieve upcoming auctions.
+
+18. Retrieve today's auctions.
+
+19. Confirm past auctions are excluded by default.
+
+20. Confirm sale_date=0 records are excluded from upcoming results.
+
+21. Re-import the same CSV.
+
+22. Confirm no duplicates are created.
+
+23. Import an updated CSV.
+
+24. Confirm newer records update correctly.
+
+25. Test pagination.
+
+26. Test sorting.
+
+27. Test authentication.
+
+28. Test API documentation.
+
+29. Run the complete pytest suite.
+
+30. Run Docker Compose.
+
+The project is considered complete only when all acceptance tests pass.
+
+============================================================
+83. FINAL DELIVERABLE
+=====================
+
+At the end provide:
+
+COMPLETE SOURCE CODE
+
+DATABASE MODELS
+
+ALEMBIC MIGRATIONS
+
+CSV IMPORTER
+
+IMPORT JOB SYSTEM
+
+SEARCH ENGINE
+
+DATE/TIME ENGINE
+
+REST API
+
+AUTHENTICATION
+
+ADVANCED FILTERS
+
+PAGINATION
+
+SORTING
+
+AUTOCOMPLETE
+
+FACETS
+
+TEST SUITE
+
+DOCKERFILE
+
+DOCKER COMPOSE
+
+ENVIRONMENT FILE
+
+README
+
+CLI IMPORTER
+
+============================================================
+84. FINAL AI AGENT RULE
+=======================
+
+Do not implement everything in one giant uncontrolled step.
+
+Implement the project phase-by-phase.
+
+Before moving to the next phase:
+
+1. Inspect the current code.
+2. Run tests.
+3. Fix errors.
+4. Check database migrations.
+5. Check API behavior.
+6. Verify the phase acceptance criteria.
+7. Then continue.
+
+Never destroy working functionality from previous phases.
+
+If a design decision is required, prefer:
+
+simplicity
+
+performance
+
+correctness
+
+maintainability
+
+PostgreSQL-native functionality
+
+over unnecessary complexity.
+
+============================================================
+END OF MASTER PROMPT
+====================
