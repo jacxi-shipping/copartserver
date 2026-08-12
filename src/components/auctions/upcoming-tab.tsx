@@ -101,9 +101,23 @@ const staggerContainer = {
   animate: { transition: { staggerChildren: 0.05 } },
 }
 
-// ─── Upcoming Tab Component ──────────────────────────────────────────────────
+// ─── Auction List Component ──────────────────────────────────────────────────
 
-export function UpcomingTab() {
+interface AuctionListTabProps {
+  endpoint?: string
+  title?: string
+  description?: string
+  emptyMessage?: string
+  paginationLabel?: string
+}
+
+export function UpcomingTab({
+  endpoint = '/api/auctions/upcoming',
+  title = 'Upcoming Lots',
+  description = 'Browse lots scheduled for upcoming sale dates.',
+  emptyMessage = 'No upcoming lots found',
+  paginationLabel = 'Upcoming',
+}: AuctionListTabProps) {
   const [auctions, setAuctions] = useState<Auction[]>([])
   const [loading, setLoading] = useState(true)
   const [pagination, setPagination] = useState<PaginationInfo | null>(null)
@@ -193,20 +207,23 @@ export function UpcomingTab() {
 
   // Fetch facets
   useEffect(() => {
-    setFacetsLoading(true)
-    fetch('/api/search/facets')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.success && data.data) {
-          setFacets({
-            makes: data.data.makes ?? [],
-            bodyStyles: data.data.bodyStyles ?? [],
-            fuelTypes: data.data.fuelTypes ?? [],
+    const timeout = setTimeout(() => {
+      setFacetsLoading(true)
+      fetch('/api/search/facets')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.success && data.data) {
+            setFacets({
+              makes: data.data.makes ?? [],
+              bodyStyles: data.data.bodyStyles ?? [],
+              fuelTypes: data.data.fuelTypes ?? [],
+            })
+          }
           })
-        }
-      })
-      .catch(() => setFacets(null))
-      .finally(() => setFacetsLoading(false))
+        .catch(() => setFacets(null))
+        .finally(() => setFacetsLoading(false))
+    }, 0)
+    return () => clearTimeout(timeout)
   }, [])
 
   const fetchAuctions = useCallback(
@@ -222,7 +239,7 @@ export function UpcomingTab() {
         if (filterBodyStyle) params.set('bodyStyle', filterBodyStyle)
         if (filterFuelType) params.set('fuelType', filterFuelType)
 
-        const res = await fetch(`/api/auctions/upcoming?${params.toString()}`)
+        const res = await fetch(`${endpoint}?${params.toString()}`)
         if (res.ok) {
           const data = await res.json()
           setAuctions(data.data ?? [])
@@ -235,20 +252,23 @@ export function UpcomingTab() {
         setLoading(false)
       }
     },
-    [filterState, filterMake, filterBodyStyle, filterFuelType, sortBy, viewMode]
+    [endpoint, filterState, filterMake, filterBodyStyle, filterFuelType, sortBy, viewMode]
   )
 
   useEffect(() => {
-    fetchAuctions()
+    const timeout = setTimeout(() => {
+      void fetchAuctions()
+    }, 0)
+    return () => clearTimeout(timeout)
   }, [fetchAuctions])
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Upcoming Lots</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
           <p className="text-sm text-muted-foreground">
-            Browse lots scheduled for upcoming sale dates.
+            {description}
           </p>
         </div>
         <Badge className="border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
@@ -419,7 +439,7 @@ export function UpcomingTab() {
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <CalendarClock className="mb-3 size-12 text-muted-foreground/30" />
             <p className="text-sm font-medium text-muted-foreground">
-              No upcoming lots found
+              {emptyMessage}
             </p>
             <p className="mt-1 text-xs text-muted-foreground/70">
               {activeFilterCount > 0
@@ -495,7 +515,7 @@ export function UpcomingTab() {
               pagination={pagination}
               page={page}
               onPageChange={fetchAuctions}
-              label="Upcoming"
+              label={paginationLabel}
             />
           )}
         </>
@@ -589,7 +609,7 @@ export function UpcomingTab() {
               pagination={pagination}
               page={page}
               onPageChange={fetchAuctions}
-              label="Upcoming"
+              label={paginationLabel}
             />
           )}
         </>

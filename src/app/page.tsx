@@ -38,6 +38,7 @@ import { useAppStore } from '@/lib/store'
 import { DashboardTab } from '@/components/dashboard/stats-cards'
 import { SearchTab } from '@/components/search/search-tab'
 import { ImportTab } from '@/components/import/import-tab'
+import { AllAuctionsTab } from '@/components/auctions/all-auctions-tab'
 import { UpcomingTab } from '@/components/auctions/upcoming-tab'
 import { TodayTab } from '@/components/auctions/today-tab'
 import { WatchlistTab } from '@/components/watchlist/watchlist-tab'
@@ -61,6 +62,7 @@ const navItems = [
   { id: 'search', label: 'Search', icon: Search, badge: null },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, badge: null },
   { id: 'import', label: 'Import', icon: FileImport, badge: null },
+  { id: 'auctions', label: 'All Auctions', icon: Car, badge: null },
   { id: 'upcoming', label: 'Upcoming', icon: CalendarClock, badge: null },
   { id: 'today', label: "Today's Lots", icon: Calendar, badge: null },
 ]
@@ -107,6 +109,7 @@ function AppSidebar() {
     if (!loaded || !counts) return null
     switch (id) {
       case 'dashboard': return counts.total
+      case 'auctions': return counts.total
       case 'upcoming': return counts.upcoming
       case 'today': return counts.today
       case 'import': return counts.imports
@@ -495,6 +498,7 @@ export default function HomePage() {
                 {activeTab === 'dashboard' && <DashboardTab />}
                 {activeTab === 'search' && <SearchTab />}
                 {activeTab === 'import' && <ImportTab />}
+                {activeTab === 'auctions' && <AllAuctionsTab />}
                 {activeTab === 'upcoming' && <UpcomingTab />}
                 {activeTab === 'today' && <TodayTab />}
                 {activeTab === 'analytics' && <AnalyticsTab />}
